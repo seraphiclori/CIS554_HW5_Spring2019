@@ -1,42 +1,41 @@
-# CIS554 - HW4
+# CIS554 - HW5
 
-### Push back (2)
+### Test Case 1 :- 
+Ring( int i, int j) constructor  - 
+     - test case (4,5)
+	- row checker   ( 3 points)
+	- column checker ( 3 points)
 
-- to empty bag (1)
-- normal  (1)
+     - test case (1,1) ( 1 pts)
+    
+### Test Case 2 :-
+Initializer list 
+	- empty list ( 1 points)
+	- normal case ( 3  points)
+  
+### Test Case 3 :- 
+Copy Constructor ( 2 pts)
 
-### Pop back (4)
+### Test Case 4 :-
+R-Value operator (3 pts)
 
-- Empty (1)
-- bag with 1 element (2)
-- normal (1)
+### Test Case 5 :-
+Move Constructor ( 3 pts)
 
-### Push front (2)
+### Test Case 6 :-
+L-Value operator ( 4 pts)
 
-- Empty (1)
-- normal (1)
+### Test Case 7 :-
+indexing operators (6 points)
 
-### Pop front (2)
-- empty (1)
-- Normal (1)
+### Test Case 8:- 
+DelCol ( 8 points)
 
-### Index access (2)
+### Test Case 9:-
+Threetimes (2 pts)
 
-### Find (4)
-
-### Erase by point (2)
-
-### Erase by index (3)
-
-### Clear (4)
-
-### Copy constructor (2)
-
-### Lvalue (3)
-
-### Insert (3)
-
-### Initializer list (3) 
+### Test Case 10:-
+destructor ( 3pts)
 
 
 
