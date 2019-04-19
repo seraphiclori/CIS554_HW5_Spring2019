@@ -1,0 +1,1 @@
+devenv %~dp0HW4_CIS554_19Spring.sln /ReBuild
