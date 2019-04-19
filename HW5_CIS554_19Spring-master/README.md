@@ -1,12 +1,10 @@
 # CIS554 - HW5
 
 ### Test Case 1 :- 
-Ring( int i, int j) constructor  - 
-     - test case (4,5)
-	- row checker   ( 3 points)
-	- column checker ( 3 points)
+Ring( int i, int j) constructor
 
-     - test case (1,1) ( 1 pts)
+- test case (4,5) (4 pts)
+- test case (1,1) ( 1 pts)
     
 ### Test Case 2 :-
 Initializer list 
