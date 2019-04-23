@@ -1,0 +1,259 @@
+//HW5 Due: April 7 (Sunday) at 11:59PM
+#include <iostream>
+#include <memory>
+
+// Kevin Fu
+// 621894645
+// kfu101@syr.edu
+
+using namespace std;
+
+class node {
+public:
+	shared_ptr<node> east;
+	shared_ptr<node> south;
+	int value;
+	node() {}
+	node(int i) { value = i; }
+};
+
+class ring {
+public:
+	//Implement all functions described below
+	//funciton operator[] can be invoked by other functions
+
+
+	shared_ptr<node> head;
+	int num_rows;
+	int num_cols;
+	ring() {}
+	ring(int i, int j);//constructor
+					   //i rows and j cols
+					   //values from 0 to i*j-1
+					//See the photo for ring structures.
+
+	~ring();//destructor; do as little work as possible
+	ring(const ring &r); //copy constructor
+	ring(ring &&r); //move constructor
+	void operator=(ring &&r);//R-value operator=
+	void operator=(const ring &r); //L-value operator=
+	ring(const initializer_list<int> &V);//see the explanation in main function
+	int & operator[](int a);
+	int & operator[](pair<int, int> p); //first is row number and second is col number
+
+	void DelCol(int i);//delete col i of *this
+	ring Threetimes();
+	//return a ring with the same dimenstion as *this, and the value of every node is three times of that of *this.
+
+};
+
+//////// CONSTRUCTOR DEFINITIONS /////
+
+ring::ring(int i, int j) { // nodes from 0 to i*j-1; i*j nodes; i rows, j columns
+	// remember to utilize shared pointers (east and south)!
+
+	// algorithm: start at node value 0 and add nodes until i*j-1. do all the east pointers.
+	// go through the nodes again, then add south nodes as necessary, according to i and j.
+
+	num_rows = i;
+	num_cols = j;
+
+	// bad i and j case
+	if (i <= 0 || j <= 0) { return; } // do nothing
+
+	// single node case
+	if (num_rows * num_cols == 1) {
+
+		// make single node, east pointer to itself, south pointer to itself
+
+		shared_ptr<node> single = make_shared<node>(0);
+		single->east = single;
+		single->south = single;
+		head = single;
+	}
+
+	else { // non-single case
+
+		// for loop and link a bunch of nodes together with easts. 
+		// start with one single node
+
+		shared_ptr<node> nd = make_shared<node>(0);
+		head = nd;
+		for (int i = 1; i < num_rows * num_cols; i++) {
+			nd->east = make_shared<node>(i); // 
+			nd = nd->east; // advance the "nd"
+		} // at end of loop, all nodes are created
+
+		// loop east (and south while we're at it) back to head
+		nd->east = head;
+		nd->south = head;
+
+		nd = nd->east; // proceed to beginning
+
+		// still need to do the south pointers, so... loop through each row, and ...
+		// first, get a toSouth row. the above line will point to the toSouth row for south pointers.
+		// only do this for the first i-1 rows, though.
+		// then loop through the row and connect the above node to the toSouth row node.
+
+		shared_ptr<node> toSouth = nd;
+		for (int r = 0; r < num_rows - 1; r++) { // loop through num_rows - 1 times
+			for (int x = 0; x < num_cols; x++) {
+				toSouth = toSouth->east;
+			} // successfully got toSouth to the row below
+
+			for (int x = 0; x < num_cols; x++) {
+				nd->south = toSouth; // connect south
+				nd = nd->east; // move nd to the right
+				toSouth = toSouth->east; // move toSouth to the right
+			}
+		} // toSouth should be at bottomleft-most, nd should be at row above bottomleft-most at this point.
+
+		nd = toSouth; // start where toSouth was
+		toSouth = head->east; // move toSouth to node 1
+		for (int k = 0; k < num_cols - 1; k++) {
+			nd->south = toSouth;
+			nd = nd->east;
+			toSouth = toSouth->east;
+		} // connect the south pointers of the bottom row.
+
+		nd->south = head; // cover last column.
+
+	}
+
+}
+
+//////// DESTRUCTOR DEFINITION //////
+
+ring::~ring() {
+
+
+}
+
+/////// COPY CONSTRUCTOR DEFINITION //////
+
+ring::ring(const ring &r) {
+
+
+}
+
+
+/////// MOVE CONSTRUCTOR DEFINITION //////
+
+ring::ring(ring &&r) {
+
+
+}
+
+
+/////// R VALUE OPERATOR DEFINITION    /////
+
+void ring::operator=(ring &&r) {
+
+
+}
+
+////// L VALUE OPERATOR DEFINITION /////
+
+void ring::operator=(const ring &r) {
+	
+
+}
+
+
+////// INITIALIZER LIST DEFINITION /////
+
+ring::ring(const initializer_list<int> &V) {
+
+
+}
+
+///////// operator[] ////////////
+/*
+int & ring::operator[](int a) {
+	//shared_ptr<node> n = make_shared<node>(0);
+
+	//return n->value;
+	
+}
+
+int & ring::operator[](pair<int, int> p) {
+
+
+	
+}
+*/
+
+/////// OTHER CONSTRUCTORS ///////
+
+/*
+ring ring::Threetimes() {
+
+
+}
+*/
+
+///////// OTHER MEMBER FUNCTIONS ///////////
+
+void ring::DelCol(int i) {
+
+
+
+}
+
+
+////////// overload operator<< ////////////
+
+ostream & operator<<(ostream &str, const ring &r) {
+	// for each row, print out each element in each column
+	shared_ptr<node> p = r.head;
+	
+	for (int i = 0; i < r.num_rows; i++) {
+		for (int j = 0; j < r.num_cols; j++) {
+			str << p->value << " ";
+			p = p->east;
+		}
+		str << endl;
+	}
+
+	return str;
+}
+
+
+/////////////////// MAIN ////////////////////
+
+int main() {
+
+	ring R1(4, 6);//24 numbers from 0 to 23 will be initialized to nodes.
+	cout << R1 << endl;
+
+	/*
+	R1[14] = 1000;
+	R1[{2, 4}] = 2000;
+	cout << R1[14] << " " << R1[{2, 4}] << endl;
+	R1.DelCol(3);
+	cout << R1 << endl;
+	R1.DelCol(4);
+	cout << R1 << endl;
+	R1.DelCol(0);
+	cout << R1 << endl;
+	shared_ptr<ring> p1 = make_shared<ring>(3, 5);
+	cout << *p1 << endl;
+	p1.reset();
+	ring R2 = { 3, 5, 10,20,30,40,50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000 };//
+	 //first two numbers are num_rows and num_cols; followed by values of nodes of ring
+	cout << R2 << endl;
+	ring R3(R2);
+	cout << R3 << endl;
+	ring R4;
+	R4 = R3;
+	cout << R4 << endl;
+	ring R5;
+	R5 = R4.Threetimes();
+	cout << R5 << endl;
+	*/
+
+	getchar();
+	getchar();
+	return 0;
+	
+}

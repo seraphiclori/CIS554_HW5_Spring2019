@@ -1,0 +1,478 @@
+//HW5 Due: April 7 (Sunday) at 11:59PM
+
+// HW5
+// Name: Bowei Qu
+// Email: bqu101@syr.edu
+// SUID: 527436255
+
+
+#include <iostream>
+#include <memory>
+
+using namespace std;
+
+class node {
+public:
+    shared_ptr<node> east;
+    shared_ptr<node> south;
+    int value;
+    node() {}
+    node(int i) { value = i; }
+};
+
+class ring {
+public:
+    //Implement all functions described below
+    //funciton operator[] can be invoked by other functions
+    
+    
+    shared_ptr<node> head;
+    
+    int num_rows;
+    int num_cols;
+    ring(){}
+    ring(int i, int j);//constructor
+    //i rows and j cols
+    //values from 0 to i*j-1
+    //See the photo for ring structures.
+    
+    ~ring();//destructor; do as little work as possible
+    ring(const ring &r); //copy constructor
+    ring(ring &&r); //move constructor
+    void operator=(ring &&r);//R-value operator=
+    void operator=(const ring &r); //L-value operator=
+    ring(const initializer_list<int> &V);//see the explanation in main function
+    int & operator[](int a);
+    int & operator[](pair<int, int> p); //first is row number and second is col number
+
+    void DelCol(int i);//delete col i of *this
+    ring Threetimes();
+    //return a ring with the same dimenstion as *this, and the value of every node is three times of that of *this.
+    
+};
+
+/*---------- constructor  ------------------*/
+ring::ring(int i, int j){
+    num_rows = i;
+    num_cols = j;
+    if(i*j==0){
+        return;
+    }
+
+
+    int cnt = 0;    //value in node
+    shared_ptr<node> p;     //next node
+    shared_ptr<node> crt;   //current node
+    shared_ptr<node> temp;  //use to get south
+
+    shared_ptr<node> helper = make_shared<node>(0); // a helper node
+    crt = helper;
+
+    // first row
+    // only east
+    for(int n=0; n<num_cols;++n){
+        p = make_shared<node>(cnt++);
+        crt->east = p;
+        crt = p;
+    }
+    
+    // 2 th - n th rows
+    // add east value and last row's south value
+    // at this time, crt point to the last node of the first row
+    temp = helper->east;    // temp point to head
+    for(int m=1; m<num_rows;++m){
+        for(int k=0; k<num_cols; ++k){
+            p = make_shared<node>(cnt++);
+            crt->east = p;
+            temp->south = p;    // temp is p's north node
+            crt = p;
+            temp = temp->east;
+        }
+    }
+    
+    //modify the south value of the last row
+    //at this time, temp pointing to the first node in the last row
+    //at this time, crt pointing to the last node in the last row
+    crt->east = helper->east;   // connect last node to head
+    if(num_cols<2){    // only one column
+        return;
+    }
+    crt = crt->east->east;            // crt become head->east
+    for(int t = 1; t<num_cols; ++t){
+        temp->south = crt;
+        crt = crt->east;
+        temp = temp->east;
+    }
+    head = helper->east;
+
+}
+
+/*---------- destructor  ------------------*/
+ring::~ring(){
+    // just delete all east and south for one row or column
+    // we compare num_rows and num_cols to choose the shorter one
+    shared_ptr<node> p = head;
+    shared_ptr<node> nxt;
+    if(num_rows<num_cols){
+        for(int i=0;i<num_rows;i++){
+            nxt = p->south;
+            p->east.reset();
+            p->south.reset();
+            p = nxt;
+        }
+    }else{
+        for(int i=0;i<num_cols;i++){
+            nxt = p->east;
+            p->east.reset();
+            p->south.reset();
+            p = nxt;
+        }
+    }
+    head.reset();
+    
+}
+
+/*---------- copy constructor  ------------------*/
+ring::ring(const ring &r){
+    
+    num_rows = r.num_rows;
+    num_cols = r.num_cols;
+    if(num_rows*num_cols==0){
+        return;
+    }
+    
+    shared_ptr<node> p;     //next node
+    shared_ptr<node> crt;   //current node
+    shared_ptr<node> temp;  //use to get south
+    
+    shared_ptr<node> helper = make_shared<node>(0); // a helper node
+    crt = helper;
+    
+    shared_ptr<node> pr = r.head;   //nodes on r
+    
+    // first row
+    // only east
+    for(int n=0; n<num_cols;++n){
+        p = make_shared<node>(pr->value);
+        crt->east = p;
+        crt = p;
+        pr = pr->east;
+    }
+    
+    // add east value and last row's south value
+    // at this time, crt point to the last node of the first row
+    temp = helper->east;    // temp point to head
+    for(int m=1; m<num_rows;++m){
+        for(int k=0; k<num_cols; ++k){
+            p = make_shared<node>(pr->value);
+            crt->east = p;
+            temp->south = p;
+            crt = p;
+            temp = temp->east;
+            pr = pr->east;
+        }
+    }
+    
+    //modify the south value of the last row
+    //at this time, temp pointing to the first node in the last row
+    //at this time, crt pointing to the last node in the last row
+    crt->east = helper->east;   // connect last node to head
+    if(num_cols<2){    // only one column
+        return;
+    }
+    crt = crt->east->east;            // crt become head->east
+    for(int t = 1; t<num_cols; ++t){
+        temp->south = crt;
+        crt = crt->east;
+        temp = temp->east;
+    }
+    
+    head = helper->east;
+}
+
+/*---------- move constructor  ------------------*/
+ring::ring(ring &&r){
+    num_rows = r.num_rows;
+    num_cols = r.num_cols;
+    head = r.head;
+    r.head.reset();
+    r.num_rows=0;
+    r.num_cols=0;
+}
+
+/*---------- R-value operator=  ------------------*/
+void ring::operator=(ring &&r){
+    // delete original ring
+    shared_ptr<node> p = head;
+    shared_ptr<node> nxt;
+    if(num_rows<num_cols){
+        for(int i=0;i<num_rows;i++){
+            nxt = p->south;
+            p->east.reset();
+            p->south.reset();
+            p = nxt;
+        }
+    }else{
+        for(int i=0;i<num_cols;i++){
+            nxt = p->east;
+            p->east.reset();
+            p->south.reset();
+            p = nxt;
+        }
+    }
+    head.reset();
+    
+    //move new ring
+    num_rows = r.num_rows;
+    num_cols = r.num_cols;
+    head = r.head;
+    r.head.reset();
+    r.num_rows=0;
+    r.num_cols=0;
+}
+
+/*---------- L-value operator= ------------------*/
+void ring::operator=(const ring &r){
+    // delete original ring
+    shared_ptr<node> pt = head;
+    shared_ptr<node> nxt;
+    if(num_rows<num_cols){
+        for(int i=0;i<num_rows;i++){
+            nxt = pt->south;
+            pt->east.reset();
+            pt->south.reset();
+            pt = nxt;
+        }
+    }else{
+        for(int i=0;i<num_cols;i++){
+            nxt = pt->east;
+            pt->east.reset();
+            pt->south.reset();
+            pt = nxt;
+        }
+    }
+    head.reset();
+    
+    // copy the new ring
+    num_rows = r.num_rows;
+    num_cols = r.num_cols;
+    if(num_rows*num_cols==0){
+        return;
+    }
+    
+    shared_ptr<node> p;     //next node
+    shared_ptr<node> crt;   //current node
+    shared_ptr<node> temp;  //use to get south
+    
+    shared_ptr<node> helper = make_shared<node>(0); // a helper node
+    crt = helper;
+    
+    shared_ptr<node> pr = r.head;   //nodes on r
+    
+    // first row
+    // only east
+    for(int n=0; n<num_cols;++n){
+        p = make_shared<node>(pr->value);
+        crt->east = p;
+        crt = p;
+        pr = pr->east;
+    }
+    
+    // add east value and last row's south value
+    // at this time, crt point to the last node of the first row
+    temp = helper->east;    // temp point to head
+    for(int m=1; m<num_rows;++m){
+        for(int k=0; k<num_cols; ++k){
+            p = make_shared<node>(pr->value);
+            crt->east = p;
+            temp->south = p;
+            crt = p;
+            temp = temp->east;
+            pr = pr->east;
+        }
+    }
+    
+    //modify the south value of the last row
+    //at this time, temp pointing to the first node in the last row
+    //at this time, crt pointing to the last node in the last row
+    crt->east = helper->east;   // connect last node to head
+    if(num_cols<2){    // only one column
+        return;
+    }
+    crt = crt->east->east;            // crt become head->east
+    for(int t = 1; t<num_cols; ++t){
+        temp->south = crt;
+        crt = crt->east;
+        temp = temp->east;
+    }
+    
+    head = helper->east;
+}
+
+//----------    initializer_list   ---------------//
+ring::ring(const initializer_list<int> &V){
+    auto t = V.begin();
+    num_rows = *t++;
+    num_cols = *t++;
+    if(num_rows*num_cols==0){
+        return;
+    }
+    
+    shared_ptr<node> p;     //next node
+    shared_ptr<node> crt;   //current node
+    shared_ptr<node> temp;  //use to get south
+    
+    shared_ptr<node> helper = make_shared<node>(0); // a helper node
+    crt = helper;
+    
+    
+    // first row
+    // only east
+    for(int n=0; n<num_cols;++n){
+        p = make_shared<node>(*t++);
+        crt->east = p;
+        crt = p;
+    }
+    
+    // add east value and last row's south value
+    // at this time, crt point to the last node of the first row
+    temp = helper->east;    // temp point to head
+    for(int m=1; m<num_rows;++m){
+        for(int k=0; k<num_cols; ++k){
+            p = make_shared<node>(*t++);
+            crt->east = p;
+            temp->south = p;
+            crt = p;
+            temp = temp->east;
+        }
+    }
+    
+    //modify the south value of the last row
+    //at this time, temp pointing to the first node in the last row
+    //at this time, crt pointing to the last node in the last row
+    crt->east = helper->east;   // connect last node to head
+    if(num_cols<2){    // only one column
+        return;
+    }
+    crt = crt->east->east;            // crt become head->east
+    for(int t = 1; t<num_cols; ++t){
+        temp->south = crt;
+        crt = crt->east;
+        temp = temp->east;
+    }
+    
+    head = helper->east;
+}
+
+
+//----------    overload <<    ---------------//
+ostream& operator << (ostream& str, ring &r){
+    shared_ptr<node> p = r.head;
+    for(int i=0; i<r.num_rows;++i){
+        for(int j=0; j<r.num_cols;++j){
+            str<<p->value<<' ';
+            p = p->east;
+        }
+        str<<endl;
+    }
+    return str;
+}
+
+//------------  overload [] (int)-----------------//
+int& ring::operator[](int a){
+    shared_ptr<node> p =head;
+    while(a--){
+        p = p->east;
+    }
+    return p->value;
+}
+
+//------------  overload [] (pair<int,int>)-----------------//
+int& ring::operator[](pair<int, int> p){
+    shared_ptr<node> t = head;
+    int x = p.first;    // row number
+    int y = p.second;   // column number
+    while(x--){
+        t = t->south;
+    }
+    while(y--){
+        t = t->east;
+    }
+    return t->value;
+}
+
+//------------  DelCol(int) -----------------//
+void ring::DelCol(int i){
+    if(num_cols==1){    // only one column
+        head.reset();
+        return;
+    }
+    int cnt = 0;
+    int n = num_rows*num_cols;
+    int lastRow = (num_rows-1)*num_cols;
+    shared_ptr<node> p = head;
+    while(cnt<n){
+        if((cnt+1)%num_cols==i){    // we need to delete next node
+            if(cnt>(lastRow-1)){    // we need to modify the south of this node in last row
+                if(i==0){           // the column is the first column
+                    head = head->east;
+                    p->south=p->east->east;
+                }else{
+                    p->south = p->east->south;
+                }
+            }
+            p->east = p->east->east;
+            cnt++;
+        }
+        p = p->east;
+        cnt++;
+    }
+    num_cols--;
+}
+
+//------------  Threetimes -----------------//
+ring ring::Threetimes(){
+    ring temp(*this);   // copy constructor
+    shared_ptr<node> p = temp.head;
+    if(num_rows*num_cols==0){
+        return temp;
+    }
+    do{
+        p->value*=3;
+        p=p->east;
+    }while(p!=temp.head);
+    return temp;
+}
+
+int main() {
+    
+    ring R1(4, 6);//24 numbers from 0 to 23 will be initialized to nodes.
+    cout << R1 << endl;
+    R1[14] = 1000;
+    R1[{2, 4}] = 2000;
+    cout << R1[14] << " " << R1[{2, 4}] << endl;
+    R1.DelCol(3);
+    cout << R1 << endl;
+    R1.DelCol(4);
+    cout << R1 << endl;
+    R1.DelCol(0);
+    cout << R1 << endl;
+    shared_ptr<ring> p1 = make_shared<ring>(3, 5);
+    cout << *p1 << endl;
+    p1.reset();
+    ring R2 = { 3, 5, 10,20,30,40,50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000 };//
+    //first two numbers are num_rows and num_cols; followed by values of nodes of ring
+    cout << R2 << endl;
+    ring R3(R2);
+    cout << R3 << endl;
+    ring R4;
+    R4 = R3;
+    cout << R4 << endl;
+    ring R5;
+    R5 = R4.Threetimes();
+    cout << R5 << endl;
+    
+    getchar();
+    getchar();
+    return 0;
+}

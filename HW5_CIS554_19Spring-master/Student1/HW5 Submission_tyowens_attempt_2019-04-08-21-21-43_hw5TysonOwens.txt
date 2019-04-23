@@ -1,0 +1,356 @@
+//HW5 Due: April 7 (Sunday) at 11:59PM
+#include <iostream>
+#include <memory>
+
+// HW5
+// Tyson Owens
+// tyowens@syr.edu
+// 334-833-587
+
+using namespace std;
+
+class node {
+public:
+    shared_ptr<node> east;
+    shared_ptr<node> south;
+    int value;
+    node() {}
+    node(int i) { value = i; }
+};
+
+class ring {
+public:
+    //Implement all functions described below
+    //funciton operator[] can be invoked by other functions
+
+
+    shared_ptr<node> head;
+    int num_rows;
+    int num_cols;
+    ring(){}
+    ring(int i, int j){//constructor //i rows and j cols //values from 0 to i*j-1 //See the photo for ring structures.
+        //if(i <=0 || j <= 0) return;
+        //create a loop of nodes implementing only east pointers
+        num_rows =  i;
+        num_cols = j;
+        shared_ptr<node> firstNode = make_shared<node>(0);
+        head = firstNode;
+        for(int nodeNum = 1; nodeNum < (i*j); nodeNum++){
+            shared_ptr<node> secondNode = make_shared<node>(nodeNum);
+            firstNode->east = secondNode;
+            firstNode = secondNode;
+        }
+        firstNode->east = head;
+
+        //now implement the south pointers
+        firstNode = head;
+        shared_ptr<node> secondNode = head;
+        for (int i = 0; i < ((num_cols * num_rows) - num_cols); i++){
+            secondNode = firstNode;
+            for (int j = 0; j < num_cols; j++){
+                secondNode = secondNode->east;
+            }
+            firstNode->south = secondNode;
+            firstNode = firstNode->east;
+        }//after this loop we have p1 at first node in last row
+        for (int i =  0; i < num_cols-1; i++){
+            secondNode = firstNode;
+            for (int j = 0; j < num_cols+1; j++){
+                secondNode = secondNode->east;
+            }
+            firstNode->south = secondNode;
+            firstNode = firstNode->east;
+        }
+        firstNode->south = head;
+        firstNode.reset();
+        secondNode.reset();
+    }
+
+    ~ring(){//destructor; do as little work as possible
+        shared_ptr<node> eastStepper1 = head->east;
+        shared_ptr<node> eastStepper2 = head->east;
+        shared_ptr<node> southStepper1 = head->south;
+        shared_ptr<node> southStepper2 = head->south;
+        head.reset();
+        for(int i = 0; i < num_cols-1; i++){
+            eastStepper2 = eastStepper2->east;
+            eastStepper1->east.reset();
+            eastStepper1->south.reset();
+            eastStepper1 = eastStepper2;
+        }
+        for(int i = 0; i < num_rows-1; i++){
+            southStepper2 = southStepper2->south;
+            southStepper1->east.reset();
+            southStepper1->south.reset();
+            southStepper1 = southStepper2;
+        }
+        num_cols = 0;
+        num_rows = 0;
+        head = nullptr;
+    }
+    ring(const ring &r){ //copy constructor
+        num_cols = r.num_cols;
+        num_rows = r.num_rows;
+        shared_ptr<node> stepper = r.head;
+        shared_ptr<node> firstNode = make_shared<node>(stepper->value);
+        head = firstNode;
+        for(int nodeNum = 1; nodeNum < (num_cols*num_rows); nodeNum++){
+            stepper = stepper->east;
+            shared_ptr<node> secondNode = make_shared<node>(stepper->value);
+            firstNode->east = secondNode;
+            firstNode = secondNode;
+        }
+        firstNode->east = head;
+
+        //now implement the south pointers
+        firstNode = head;
+        shared_ptr<node> secondNode = head;
+        for (int i = 0; i < ((num_cols * num_rows) - num_cols); i++){
+            secondNode = firstNode;
+            for (int j = 0; j < num_cols; j++){
+                secondNode = secondNode->east;
+            }
+            firstNode->south = secondNode;
+            firstNode = firstNode->east;
+        }//after this loop we have p1 at first node in last row
+        for (int i =  0; i < num_cols-1; i++){
+            secondNode = firstNode;
+            for (int j = 0; j < num_cols+1; j++){
+                secondNode = secondNode->east;
+            }
+            firstNode->south = secondNode;
+            firstNode = firstNode->east;
+        }
+        firstNode->south = head;
+        firstNode.reset();
+        secondNode.reset();
+    }
+    ring(ring &&r){ //move constructor
+        head = r.head;
+        num_rows = r.num_rows;
+        num_cols = r.num_cols;
+        r.head = nullptr;
+        r.num_cols = 0;
+        r.num_rows = 0;
+    }
+    void operator=(ring &&r){//R-value operator=
+        cout << "debug R" << endl;
+        head = r.head;
+        cout << "debug2" << endl;
+        num_rows = r.num_rows;
+        num_cols = r.num_cols;
+        cout << "debug: " <<  num_cols << " " << r.num_cols << endl;
+        cout << "debug4" << endl;
+    }
+    void operator=(const ring &r){ //L-value operator=
+        if(num_cols != 0 || num_rows != 0){
+            delete this;
+        }
+        num_cols = r.num_cols;
+        num_rows = r.num_rows;
+        shared_ptr<node> stepper = r.head;
+        shared_ptr<node> firstNode = make_shared<node>(stepper->value);
+        head = firstNode;
+        for(int nodeNum = 1; nodeNum < (num_cols*num_rows); nodeNum++){
+            stepper = stepper->east;
+            shared_ptr<node> secondNode = make_shared<node>(stepper->value);
+            firstNode->east = secondNode;
+            firstNode = secondNode;
+        }
+        firstNode->east = head;
+
+        //now implement the south pointers
+        firstNode = head;
+        shared_ptr<node> secondNode = head;
+        for (int i = 0; i < ((num_cols * num_rows) - num_cols); i++){
+            secondNode = firstNode;
+            for (int j = 0; j < num_cols; j++){
+                secondNode = secondNode->east;
+            }
+            firstNode->south = secondNode;
+            firstNode = firstNode->east;
+        }//after this loop we have p1 at first node in last row
+        for (int i =  0; i < num_cols-1; i++){
+            secondNode = firstNode;
+            for (int j = 0; j < num_cols+1; j++){
+                secondNode = secondNode->east;
+            }
+            firstNode->south = secondNode;
+            firstNode = firstNode->east;
+        }
+        firstNode->south = head;
+        firstNode.reset();
+        secondNode.reset();
+    }
+    ring(const initializer_list<int> &V){//first two numbers are num_rows and num_cols; followed by values of nodes of ring
+        auto it1 = V.begin();
+        num_rows = *it1;
+        it1++;
+        num_cols = *it1;
+        it1++;
+        shared_ptr<node> firstNode = make_shared<node>(*it1);
+        head = firstNode;
+        for(int nodeNum = 1; nodeNum < (num_cols*num_rows); nodeNum++){
+            it1++;
+            shared_ptr<node> secondNode = make_shared<node>(*it1);
+            firstNode->east = secondNode;
+            firstNode = secondNode;
+        }
+        firstNode->east = head;
+
+        //now implement the south pointers
+        firstNode = head;
+        shared_ptr<node> secondNode = head;
+        for (int i = 0; i < ((num_cols * num_rows) - num_cols); i++){
+            secondNode = firstNode;
+            for (int j = 0; j < num_cols; j++){
+                secondNode = secondNode->east;
+            }
+            firstNode->south = secondNode;
+            firstNode = firstNode->east;
+        }//after this loop we have p1 at first node in last row
+        for (int i =  0; i < num_cols-1; i++){
+            secondNode = firstNode;
+            for (int j = 0; j < num_cols+1; j++){
+                secondNode = secondNode->east;
+            }
+            firstNode->south = secondNode;
+            firstNode = firstNode->east;
+        }
+        firstNode->south = head;
+        firstNode.reset();
+        secondNode.reset();
+    }
+    int & operator[](int a){
+        shared_ptr<node> stepper = head;
+        for (int i = 0; i < a; i++){
+            stepper = stepper->east;
+        }
+        int temp = stepper->value;
+        stepper.reset();
+        return temp;
+    }
+    int & operator[](pair<int, int> p){ //first is row number and second is col number
+        shared_ptr<node> stepper = head;
+        for (int i = 0; i < p.first; i++){
+            stepper = stepper->south;
+        }
+        for (int i = 0; i < p.second; i++){
+            stepper = stepper->east;
+        }
+        int temp = stepper->value;
+        stepper.reset();
+        return temp;
+    }
+    void DelCol(int i){//delete col i of *this
+        // if(num_cols = 1){
+        //   delete *this;
+        // }
+        // if(i == 0){ //if first column
+        //   shared_ptr<node> step1 = head;
+        //   shared_ptr<node> step2 = head;
+        //   for(int i = 0; i < num_rows-1; i++){
+        //     step2 = step2->south;
+        //     step1->south.reset();
+        //     step1 = step2;
+        //   }
+        //   step1 = head;
+        //   step1 = step1->east;
+        //   head = step1;
+        //   for(int i = 0; i < num_cols-2; i++){
+        //     step1 = step1->east;
+        //   }
+        //   step2 = head;
+        //
+        // }
+    }
+    ring Threetimes(){
+        ring newRing(this->num_rows*3, this->num_cols*3);
+        //create a loop of nodes implementing only east pointers
+        newRing.num_rows =  this->num_rows;
+        newRing.num_cols = this->num_cols;
+        shared_ptr<node> stepper = this->head;
+        shared_ptr<node> firstNode = make_shared<node>(stepper->value*3);
+        newRing.head = firstNode;
+        for(int nodeNum = 1; nodeNum < (this->num_cols*this->num_rows); nodeNum++){
+            stepper = stepper->east;
+            shared_ptr<node> secondNode = make_shared<node>(stepper->value*3);
+            firstNode->east = secondNode;
+            firstNode = secondNode;
+        }
+        firstNode->east = newRing.head;
+
+        //now implement the south pointers
+        firstNode = newRing.head;
+        shared_ptr<node> secondNode = newRing.head;
+        for (int i = 0; i < ((num_cols * num_rows) - num_cols); i++){
+            secondNode = firstNode;
+            for (int j = 0; j < num_cols; j++){
+                secondNode = secondNode->east;
+            }
+            firstNode->south = secondNode;
+            firstNode = firstNode->east;
+        }//after this loop we have p1 at first node in last row
+        for (int i =  0; i < num_cols-1; i++){
+            secondNode = firstNode;
+            for (int j = 0; j < num_cols+1; j++){
+                secondNode = secondNode->east;
+            }
+            firstNode->south = secondNode;
+            firstNode = firstNode->east;
+        }
+        firstNode->south = newRing.head;
+        firstNode.reset();
+        secondNode.reset();
+        stepper.reset();
+        return newRing;
+    }
+    //return a ring with the same dimenstion as *this, and the value of every node is three times of that of *this.
+    friend ostream & operator<<(ostream &str, const ring &r){
+        str << r.head->value << " ";
+        shared_ptr<node> stepper = r.head->east;
+        while(stepper->value != r.head->value){
+            //str << "stepper: " << stepper->value << " head: " << r.head->value << endl;
+            str << stepper->value << " ";
+            stepper = stepper->east;
+            //cout << "stepper " << stepper->value << endl;
+            //cout << "head " << r.head->value << endl;
+        }
+        return str;
+    }
+};
+
+int main() {
+
+    ring R1(4, 6);//24 numbers from 0 to 23 will be initialized to nodes.
+    cout << R1 << endl;
+    R1[14] = 1000;
+    R1[{2, 4}] = 2000;
+    cout << R1[14] << " " << R1[{2, 4}] << endl;
+    R1.DelCol(3);
+    cout << R1 << endl;
+    R1.DelCol(4);
+    cout << R1 << endl;
+    R1.DelCol(0);
+    cout << R1 << endl;
+    shared_ptr<ring> p1 = make_shared<ring>(3, 5);
+    cout << *p1 << endl;
+    p1.reset();
+    ring R2 = { 3, 5, 10,20,30,40,50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000 };//
+    //first two numbers are num_rows and num_cols; followed by values of nodes of ring
+    cout << R2 << endl;
+    ring R3(R2);
+    cout << R3 << endl;
+    ring R4;
+    R4 = R3;
+    cout << R4 << endl;
+    ring R5;
+    cout << "debug1" << endl;
+    R5 = R4.Threetimes();
+    cout << "debug5" << endl;
+    cout << R5 << endl;
+
+    getchar();
+    getchar();
+    return 0;
+}

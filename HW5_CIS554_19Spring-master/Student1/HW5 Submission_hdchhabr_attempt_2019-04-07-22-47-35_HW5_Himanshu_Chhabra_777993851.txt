@@ -1,0 +1,674 @@
+//HW5 Due: April 7 (Sunday) at 11:59PM
+/*
+Name : Himanshu Chhabra
+SUID : 777993851
+Email : hdchhabr@syr.edu
+Course : CIS 554 Object Oriented Programming in C++;
+*/
+#include <iostream>
+#include <memory>
+
+using namespace std;
+
+class node {
+public:
+	shared_ptr<node> east;
+	shared_ptr<node> south;
+	int value;
+	node() {}
+	node(int i) { value = i; }
+};
+
+class ring {
+public:
+	//Implement all functions described below
+	//funciton operator[] can be invoked by other functions
+
+	shared_ptr<node> head;
+	int num_rows;
+	int num_cols;
+	ring() {}
+	ring(int i, int j);//constructor
+					   //i rows and j cols
+					   //values from 0 to i*j-1
+					   //See the photo for ring structures.
+
+	~ring();//destructor; do as little work as possible
+	ring(const ring &r); //copy constructor
+	ring(ring &&r); //move constructor
+	void operator=(ring &&r);//R-value operator=
+	void operator=(const ring &r); //L-value operator=
+	ring(const initializer_list<int> &V);//see the explanation in main function
+	int & operator[](int a);
+	int & operator[](pair<int, int> p); //first is row number and second is col number
+
+	void DelCol(int i);//delete col i of *this
+	ring Threetimes();
+	//return a ring with the same dimenstion as *this, and the value of every node is three times of that of *this.
+	friend ostream & operator<<(ostream &str, const ring &r);
+
+};
+
+// destructor
+ring::~ring() {
+	//cout << "Ring Destructor" <<endl;
+	int r = num_rows;
+	int c = num_cols;
+	int i = 0;
+	shared_ptr<node> temp = head;
+	while (i < r - 1 && temp != nullptr) {
+		temp = temp->south;
+		i++;
+	}
+
+	i = 0;
+	while (i < c - 1 && temp != nullptr) {
+		temp->south.reset();
+		temp = temp->east;
+		i++;
+	}
+	if (temp != nullptr) {
+		temp->east.reset();
+		temp->south.reset();
+		temp.reset();
+	}
+	if (head != nullptr) {
+		head->east.reset();
+		head->south.reset();
+		head.reset();
+	}
+}
+// constructor
+ring::ring(int i, int j) {
+	this->num_rows = i;
+	this->num_cols = j;
+
+	int value = 0;
+	shared_ptr<node> prev; // pointer to the first node of the previous iteration
+	while (i > 0) {
+		// for each row create new list of nodes
+		int col = j;
+		shared_ptr<node> firstNode;
+		shared_ptr<node> itr;
+		while (col >0) {
+			shared_ptr<node> n = make_shared<node>(value);
+			if (firstNode == nullptr) {
+				firstNode = n;
+				itr = n;
+			}
+			else {
+				itr->east = n;
+				itr = itr->east;
+			}
+			value++;
+			col--;
+		}
+		// if head == nullptr assign it here
+		if (head == nullptr) {
+			head = firstNode;
+			prev = head;
+		}
+		else {
+
+			col = j;
+			itr = firstNode;
+
+			while (col > 0 && prev != nullptr && itr != nullptr) {
+				prev->south = itr;
+				if (col > 1) {
+					prev = prev->east;
+					itr = itr->east;
+				}
+				col--;
+			}
+			// join the last node of previous row to the firstNode of the new row
+			prev->east = firstNode;
+
+			// reset prev to the new row created
+			prev = firstNode;
+		}
+
+		// after the last row, create a temp for head and weave last row and first row together.
+		if (i == 1) {
+			itr = firstNode;
+			// reuse prev as iterator for first row, as this is the last iteration.
+			prev = head;
+			col = j;
+
+			while (col > 1 && prev != nullptr && itr != nullptr) {
+				itr->south = prev->east;
+				prev = prev->east;
+				itr = itr->east;
+				col--;
+			}
+			// adjust the last node of the last row
+			itr->east = head;
+			itr->south = head;
+
+			itr.reset();
+			firstNode.reset();
+			prev.reset();
+		}
+
+		i--;
+	}
+
+}
+
+// Initializer list
+ring::ring(const initializer_list<int> &V) {
+
+	auto it = V.begin();
+	// extract row and column
+	int i = (*it); it++;
+	int j = (*it); it++;
+
+	this->num_rows = i;
+	this->num_cols = j;
+
+	shared_ptr<node> prev; // pointer to the first node of the previous iteration
+	while (i > 0) {
+		// for each row create new list of nodes
+		int col = j;
+		shared_ptr<node> firstNode;
+		shared_ptr<node> itr;
+		while (col >0) {
+			shared_ptr<node> n = make_shared<node>((*it));
+			it++;
+			if (firstNode == nullptr) {
+				firstNode = n;
+				itr = n;
+			}
+			else {
+				itr->east = n;
+				itr = itr->east;
+			}
+			col--;
+		}
+		// if head == nullptr assign it here
+		if (head == nullptr) {
+			head = firstNode;
+			prev = head;
+		}
+		else {
+			// if previousPtr != nullptr, then weave it, use one more temp variable.
+			col = j;
+			itr = firstNode;
+
+			while (col > 0 && prev != nullptr && itr != nullptr) {
+				prev->south = itr;
+				if (col > 1) {
+					prev = prev->east;
+					itr = itr->east;
+				}
+				col--;
+			}
+			// join the last node of previous row to the firstNode of the new row
+			prev->east = firstNode;
+
+			// reset prev to the new row created
+			prev = firstNode;
+		}
+
+		// afte rthe last row, create a temp for head and weave last row and first row together.
+		if (i == 1) {
+			itr = firstNode;
+			// reuse prev as iterator for first row, as this is the last iteration.
+			prev = head;
+			col = j;
+
+			while (col > 1 && prev != nullptr && itr != nullptr) {
+				itr->south = prev->east;
+				prev = prev->east;
+				itr = itr->east;
+				col--;
+			}
+			// adjust the last node of the last row
+			itr->east = head;
+			itr->south = head;
+
+			itr.reset();
+			firstNode.reset();
+			prev.reset();
+		}
+
+		i--;
+	}
+
+}
+
+// Copy Constructor
+ring::ring(const ring &r) {
+
+	int i = r.num_rows;
+	int j = r.num_cols;
+
+	this->num_rows = i;
+	this->num_cols = j;
+	shared_ptr<node> copy = r.head;
+	shared_ptr<node> prev; // pointer to the first node of the previous iteration
+	while (i > 0) {
+		// for each row create new list of nodes
+		int col = j;
+		shared_ptr<node> firstNode;
+		shared_ptr<node> itr;
+		while (col >0) {
+			shared_ptr<node> n = make_shared<node>(copy->value);
+			copy = copy->east;
+			if (firstNode == nullptr) {
+				firstNode = n;
+				itr = n;
+			}
+			else {
+				itr->east = n;
+				itr = itr->east;
+			}
+			col--;
+		}
+		// if head == nullptr assign it here
+		if (head == nullptr) {
+			head = firstNode;
+			prev = head;
+		}
+		else {
+			// if previousPtr != nullptr, then weave it, use one more temp variable.
+			col = j;
+			itr = firstNode;
+
+			while (col > 0 && prev != nullptr && itr != nullptr) {
+				prev->south = itr;
+				if (col > 1) {
+					prev = prev->east;
+					itr = itr->east;
+				}
+				col--;
+			}
+			// join the last node of previous row to the firstNode of the new row
+			prev->east = firstNode;
+
+			// reset prev to the new row created
+			prev = firstNode;
+		}
+
+		// afte rthe last row, create a temp for head and weave last row and first row together.
+		if (i == 1) {
+			itr = firstNode;
+			// reuse prev as iterator for first row, as this is the last iteration.
+			prev = head;
+			col = j;
+
+			while (col > 1 && prev != nullptr && itr != nullptr) {
+				itr->south = prev->east;
+				prev = prev->east;
+				itr = itr->east;
+				col--;
+			}
+			// adjust the last node of the last row
+			itr->east = head;
+			itr->south = head;
+
+			itr.reset();
+			firstNode.reset();
+			prev.reset();
+		}
+
+		i--;
+	}
+
+}
+//Copy assignment
+void ring::operator=(const ring &r) {
+	int i = r.num_rows;
+	int j = r.num_cols;
+
+	this->num_rows = i;
+	this->num_cols = j;
+	shared_ptr<node> copy = r.head;
+	shared_ptr<node> prev; // pointer to the first node of the previous iteration
+	while (i > 0) {
+		// for each row create new list of nodes
+		int col = j;
+		shared_ptr<node> firstNode;
+		shared_ptr<node> itr;
+		while (col >0) {
+			shared_ptr<node> n = make_shared<node>(copy->value);
+			copy = copy->east;
+			if (firstNode == nullptr) {
+				firstNode = n;
+				itr = n;
+			}
+			else {
+				itr->east = n;
+				itr = itr->east;
+			}
+			col--;
+		}
+		// if head == nullptr assign it here
+		if (head == nullptr) {
+			head = firstNode;
+			prev = head;
+		}
+		else {
+			// if previousPtr != nullptr, then weave it, use one more temp variable.
+			col = j;
+			itr = firstNode;
+
+			while (col > 0 && prev != nullptr && itr != nullptr) {
+				prev->south = itr;
+				if (col > 1) {
+					prev = prev->east;
+					itr = itr->east;
+				}
+				col--;
+			}
+			// join the last node of previous row to the firstNode of the new row
+			prev->east = firstNode;
+
+			// reset prev to the new row created
+			prev = firstNode;
+		}
+
+		// afte rthe last row, create a temp for head and weave last row and first row together.
+		if (i == 1) {
+			itr = firstNode;
+			// reuse prev as iterator for first row, as this is the last iteration.
+			prev = head;
+			col = j;
+
+			while (col > 1 && prev != nullptr && itr != nullptr) {
+				itr->south = prev->east;
+				prev = prev->east;
+				itr = itr->east;
+				col--;
+			}
+			// adjust the last node of the last row
+			itr->east = head;
+			itr->south = head;
+
+			itr.reset();
+			firstNode.reset();
+			prev.reset();
+		}
+
+		i--;
+	}
+}
+//move constructor
+ring::ring(ring &&r) {
+	head = r.head;
+	num_rows = r.num_rows;
+	num_cols = r.num_cols;
+
+	r.head = nullptr;
+	r.num_rows = 0;
+	r.num_cols = 0;
+}
+
+// move assignment
+void ring::operator=(ring &&r) {
+	head = r.head;
+	num_rows = r.num_rows;
+	num_cols = r.num_cols;
+
+	r.head = nullptr;
+	r.num_rows = 0;
+	r.num_cols = 0;
+}
+
+ring ring::Threetimes() {
+	ring r;
+	int i = this->num_rows;
+	int j = this->num_cols;
+
+	r.num_rows = i;
+	r.num_cols = j;
+
+	shared_ptr<node> copy = this->head;
+	shared_ptr<node> prev; // pointer to the first node of the previous iteration
+	while (i > 0) {
+		// for each row create new list of nodes
+		int col = j;
+		shared_ptr<node> firstNode;
+		shared_ptr<node> itr;
+		while (col >0) {
+			shared_ptr<node> n = make_shared<node>(copy->value * 3);
+			copy = copy->east;
+			if (firstNode == nullptr) {
+				firstNode = n;
+				itr = n;
+			}
+			else {
+				itr->east = n;
+				itr = itr->east;
+			}
+			col--;
+		}
+		// if head == nullptr assign it here
+		if (r.head == nullptr) {
+			r.head = firstNode;
+			prev = r.head;
+		}
+		else {
+			// if previousPtr != nullptr, then weave it, use one more temp variable.
+			col = j;
+			itr = firstNode;
+
+			while (col > 0 && prev != nullptr && itr != nullptr) {
+				prev->south = itr;
+				if (col > 1) {
+					prev = prev->east;
+					itr = itr->east;
+				}
+				col--;
+			}
+			// join the last node of previous row to the firstNode of the new row
+			prev->east = firstNode;
+
+			// reset prev to the new row created
+			prev = firstNode;
+		}
+
+		// afte rthe last row, create a temp for head and weave last row and first row together.
+		if (i == 1) {
+			itr = firstNode;
+			// reuse prev as iterator for first row, as this is the last iteration.
+			prev = r.head;
+			col = j;
+
+			while (col > 1 && prev != nullptr && itr != nullptr) {
+				itr->south = prev->east;
+				prev = prev->east;
+				itr = itr->east;
+				col--;
+			}
+			// adjust the last node of the last row
+			itr->east = r.head;
+			itr->south = r.head;
+
+			itr.reset();
+			firstNode.reset();
+			prev.reset();
+		}
+
+		i--;
+	}
+	return r;
+}
+
+//overload operator<<
+ostream & operator<<(ostream &str, const ring &r) {
+	if (r.head == nullptr)
+		return str;
+
+	shared_ptr<node> temp = r.head;
+	str << temp->value << " ";
+	temp = temp->east;
+	int count = 2;
+	if (r.num_cols == 1) {
+		str << endl;
+	}
+	while (temp != nullptr && temp != r.head) {
+		str << temp->value << " ";
+		temp = temp->east;
+		if (count >= r.num_cols) {
+			str << endl;
+			count = 0;
+		}
+		count++;
+	}
+	return str;
+}
+
+int& ring::operator[](int a) {
+	// check if a is negative
+	if (a >= 0) {
+		int i = 0;
+		shared_ptr<node> temp = head;
+
+		while (i != a && temp != nullptr) {
+			temp = temp->east;
+			i++;
+		}
+
+		return temp->value;
+	}	
+}
+
+int& ring::operator[](pair<int, int> p) {
+	// return value only if within the index bounds (0 to num_rows - 1) and (0 to num_cols-1)
+	if ((p.first >= 0 && p.first < num_rows) && (p.second >=0 && p.second < num_cols)) {
+		int r = p.first;
+		int c = p.second;
+		int i = 0;
+		shared_ptr<node> temp = head;
+		while (i != r && temp != nullptr) {
+			temp = temp->south;
+			i++;
+		}
+		i = 0;
+		while (i != c && temp != nullptr) {
+			temp = temp->east;
+			i++;
+		}
+
+		return temp->value;
+	}
+}
+
+
+void ring::DelCol(int i) {
+	// out of bounds column index
+	if (i >= num_cols)
+		return;
+
+	// deleting the first column, adjust the head and the circular east and south pointers of the last node
+	if (i == 0) {
+		// when there is a single column
+		if (num_cols == 1) {
+			while (head->south != nullptr) {
+				shared_ptr<node> temp = head;
+				head = head->south;
+				temp->east.reset();
+				temp->south.reset();
+				temp.reset();
+			}
+
+		}
+		shared_ptr<node> itr = head;
+		// adjust the head
+		head = head->east;
+		itr->east.reset();
+		itr->south.reset();
+
+		itr = head;
+		int row = 0;
+		// adjust east node of every last node
+		while (row < num_rows && itr != nullptr) {
+			int col = 1;
+			while (col < num_cols - 1) {
+				itr = itr->east;
+				col++;
+			}
+			// now itr points to the last node
+			shared_ptr<node> firstnode = itr->east;
+
+			if (row == num_rows - 1) {
+				itr->east = head;
+				itr->south = itr->east;
+			}
+			else {
+				if (itr->east != nullptr)
+					itr->east = itr->east->east;
+			}
+
+			firstnode->east.reset();
+			firstnode->south.reset();
+			firstnode.reset();
+			itr = itr->east;
+			row++;
+		}
+		itr.reset();
+		// adjust east and south of last node
+		num_cols--;
+	}
+	else {
+
+		int col = 0;
+		shared_ptr<node> check = head;
+		shared_ptr<node> itr = head;
+		while (col < i - 1 && itr != nullptr) {
+			itr = itr->east;
+			col++;
+		}
+		int row = 0;
+		while (row < num_rows && itr != nullptr) {
+			shared_ptr<node> temp = itr->east;
+			if (row == num_rows - 1) {
+				itr->south = itr->east->south;
+			}
+			itr->east = itr->east->east;
+
+			temp->east.reset();
+			temp->south.reset();
+			temp.reset();
+			itr = itr->south;
+			row++;
+		}
+		itr.reset();
+		num_cols--;
+	}
+
+}
+
+int main() {
+
+	ring R1(4, 6);//24 numbers from 0 to 23 will be initialized to nodes.
+	cout << R1 << endl;
+	R1[14] = 1000;
+	R1[{2, 4}] = 2000;
+	cout << R1[14] << " " << R1[{2, 4}] << endl;
+	R1.DelCol(3);
+	cout << R1 << endl;
+	R1.DelCol(4);
+	cout << R1 << endl;
+	R1.DelCol(0);
+	cout << R1 << endl;
+	shared_ptr<ring> p1 = make_shared<ring>(3, 5);
+	cout << *p1 << endl;
+	p1.reset();
+	ring R2 = { 3, 5, 10,20,30,40,50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000 };//
+																							  //first two numbers are num_rows and num_cols; followed by values of nodes of ring
+	cout << R2 << endl;
+	ring R3(R2);
+	cout << R3 << endl;
+	ring R4;
+	R4 = R3;
+	cout << R4 << endl;
+	ring R5;
+	R5 = R4.Threetimes();
+	cout << R5 << endl;
+
+	getchar();
+	getchar();
+	return 0;
+}

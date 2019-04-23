@@ -1,0 +1,237 @@
+// CIS 554 HW 5
+// Rui Peng
+// rpeng06@syr.edu
+// 641201978
+
+//HW5 Due: April 7 (Sunday) at 11:59PM
+
+#include <iostream>
+#include <memory>
+
+using namespace std;
+
+class node {
+public:
+	shared_ptr<node> east;
+	shared_ptr<node> south;
+	int value;
+	node() {}
+	node(int i) { value = i; }
+};
+
+class ring {
+public:
+	//Implement all functions described below
+	//funciton operator[] can be invoked by other functions
+
+	shared_ptr<node> head;
+	int num_rows;
+	int num_cols;
+	ring() {}
+	ring(int i, int j);//constructor
+					   //i rows and j cols
+					   //values from 0 to i*j-1
+					   //See the photo for ring structures.
+	~ring();//destructor; do as little work as possible
+	ring(const ring &r); //copy constructor
+	ring(ring &&r); //move constructor
+	void operator=(ring &&r);//R-value operator=
+	void operator=(const ring &r); //L-value operator=
+	ring(const initializer_list<int>&);//see the explanation in main function, using reference
+	int & operator[](int a);
+	int & operator[](pair<int, int> p); //first is row number and second is col number
+	void DelCol(int i);//delete col i of *this
+	ring Threetimes();
+	//return a ring with the same dimension as *this, and the value of every node is three times of that of *this.
+
+private:
+	inline auto _get(int i) const;
+	inline void construct(int r, int c);
+	inline void clear();
+};
+
+auto ring::_get(int i) const {
+	auto it = head;
+	while (i--)
+		it = it->east;
+	return it;
+}
+
+void ring::construct(int r, int c) {
+	num_rows = r;
+	num_cols = c;
+	head = make_shared<node>(0);
+	auto it = head;
+	for (int i = 1; i < num_rows * num_cols; ++i) {
+		auto temp = make_shared<node>(i);
+		temp->east = head;
+		it->east = temp;
+		it = it->east;
+	}
+	for (int i = 0; i < num_rows; ++i)
+		for (int j = 0; j < num_cols; ++j) {
+			auto it = _get(i*num_cols + j);
+			if (i < num_rows - 1)
+				it->south = _get((i + 1)*num_cols + j);
+			else if (j < num_cols - 1)
+				it->south = _get(j + 1);
+			else
+				it->south = _get(0);
+		}
+}
+
+void ring::clear() {
+	if (head) {
+		auto it = head;
+		if (num_cols < num_rows)
+			for (int i = 0; i < num_cols; i++) {
+				auto temp = it;
+				it = it->east;
+				temp.reset();
+			}
+		else
+			for (int i = 0; i < num_rows; i++) {
+				auto temp = it;
+				it = it->south;
+				temp.reset();
+			}
+	}	
+}
+
+ring::ring(int r, int c) {
+	construct(r, c);
+}
+
+ring::ring(const initializer_list<int>& L) {
+	auto it2 = L.begin();
+	num_rows = *it2++;
+	num_cols = *it2++;
+	construct(num_rows, num_cols);
+	for (auto it1 = head; it2 != L.end(); it1 = it1->east)
+		it1->value = *it2++;
+}
+
+ring::ring(const ring& other) {
+	construct(other.num_rows, other.num_cols);
+	auto it1 = head, it2 = other.head;
+	for (int i = 0; i < num_rows * num_cols; i++) {
+		it1->value = it2->value;
+		it1 = it1->east;
+		it2 = it2->east;
+	}
+}
+
+ring::ring(ring&& other) {
+	num_rows = other.num_rows;
+	num_cols = other.num_cols;
+	head = other.head;
+	other.head.reset();
+}
+
+ring::~ring() {
+	clear();
+}
+
+void ring::operator=(const ring& other) {
+	clear();
+	construct(other.num_rows, other.num_cols);
+	auto it1 = head, it2 = other.head;
+	for (int i = 0; i < num_rows * num_cols; i++) {
+		it1->value = it2->value;
+		it1 = it1->east;
+		it2 = it2->east;
+	}
+}
+
+void ring::operator=(ring&& other) {
+	clear();
+	num_rows = other.num_rows;
+	num_cols = other.num_cols;
+	head = other.head;
+	other.head.reset();
+}
+
+ring ring::Threetimes() {
+	ring temp(num_rows, num_cols);
+	auto it1 = temp.head, it2 = head;
+	for (int i = 0; i < num_rows * num_cols; i++) {
+		it1->value = it2->value * 3;
+		it1 = it1->east;
+		it2 = it2->east;
+	}
+	return move(temp);
+}
+
+int& ring::operator[](int i) {
+	return _get(i)->value;
+}
+
+int& ring::operator[](pair<int, int> p) {
+	return (*this)[p.first * num_cols + p.second];
+}
+
+void ring::DelCol(int i) {
+	if (i >= 0 && i < num_cols && num_rows > 0) {
+		if (num_cols == 1)
+			head.reset();
+		else {
+			auto it = _get(num_cols - 1);
+			if (i)
+				it = _get(i - 1);
+			else
+				head = head->east;
+			for (int j = 0; j < num_rows; j++) {
+				it->east = it->east->east;
+				if (j == num_rows - 1)
+					it->south = it->east->south;
+				it = it->south;
+			}
+		}
+		num_cols--;
+	}
+}
+
+ostream& operator<<(ostream& ost, const ring& r) {
+	auto it = r.head;
+	for (int i = 0; i < r.num_rows * r.num_cols; it = it->east) {
+		ost << it->value << "\t";
+		if (++i % r.num_cols == 0)
+			ost << endl;
+	}
+	return ost;
+}
+
+
+int main() {
+
+	ring R1(4, 6);//24 numbers from 0 to 23 will be initialized to nodes.
+	cout << R1 << endl;
+	R1[14] = 1000;
+	R1[{2, 4}] = 2000;
+	cout << R1[14] << " " << R1[{2, 4}] << endl;
+	R1.DelCol(3);
+	cout << R1 << endl;
+	R1.DelCol(4);
+	cout << R1 << endl;
+	R1.DelCol(0);
+	cout << R1 << endl;
+
+	shared_ptr<ring> p1 = make_shared<ring>(3, 5);
+	cout << *p1 << endl;
+	p1.reset();
+	ring R2 = { 3, 5, 10,20,30,40,50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000 };//
+	 //first two numbers are num_rows and num_cols; followed by values of nodes of ring
+	cout << R2 << endl;
+	ring R3(R2);
+	cout << R3 << endl;
+	ring R4;
+	R4 = R3;
+	cout << R4 << endl;
+	ring R5;
+	R5 = R4.Threetimes();
+	cout << R5 << endl;
+
+	getchar();
+	getchar();
+	return 0;
+}

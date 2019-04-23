@@ -1,0 +1,378 @@
+//HW5 Due: April 7 (Sunday) at 11:59PM
+//Justin Russo
+//jurusso@syr.edu
+//55885-2416
+#include <iostream>
+#include <memory>
+
+using namespace std;
+
+class node {
+public:
+	shared_ptr<node> east;
+	shared_ptr<node> south;
+	int value;
+	node() {}
+	node(int i) { value = i; }
+};
+
+class ring {
+public:
+	//Implement all functions described below
+	//funciton operator[] can be invoked by other functions
+
+	shared_ptr<node> head;
+	int num_rows;
+	int num_cols;
+
+
+	ring() {}
+	ring(int i, int j);//constructor
+					   //i rows and j cols
+					   //values from 0 to i*j-1
+					//See the photo for ring structures.
+
+	~ring();//destructor; do as little work as possible
+	ring(const ring &r); //copy constructor
+	ring(ring &&r); //move constructor
+	void operator=(ring &&r);//R-value operator=
+	void operator=(const ring &r); //L-value operator=
+	ring(const initializer_list<int> &V);//see the explanation in main function
+	int & operator[](int a);
+	int & operator[](pair<int, int> p); //first is row number and second is col number
+
+	void DelCol(int i);//delete col i of *this
+	ring Threetimes();//return a ring with the same dimenstion as *this, and the value of every node is three times of that of *this.l
+};
+
+// ring constructor
+ring::ring(int i, int j) {
+
+	// set member variables for ring
+	num_rows = i;
+	num_cols = j;
+
+	// returns if rows or columns are zero
+	if (i == 0 || j == 0) {
+		return;
+	}
+
+	// create weak pointer used for reference inside of ring
+	weak_ptr<node> wp1;
+
+	// create second weak pointer used for indexing rows
+	weak_ptr<node> wp2;
+
+	// initialize row count
+	int row_count = 0;
+
+	// create all nodes
+	for (int k = 0; k < i*j; k++) {
+
+		// case for first node
+		if (k == 0) {
+			head = make_shared<node>(0);
+			wp1 = head;
+		}
+		// case for new row node
+		else if (k % j == 0) {
+			wp1.lock()->east = make_shared<node>(k);
+			wp1 = wp1.lock()->east;
+
+			// moves wp2 to the node above wp1
+			if (row_count == 0) {
+				wp2 = head;
+			}
+			else {
+				wp2 = wp2.lock()->east;
+			}
+
+			// draw edge from upper to lower node
+			wp2.lock()->south = wp1.lock();
+			row_count++;
+		}
+		// case for first row nodes
+		else if (row_count < 1) {
+			wp1.lock()->east = make_shared<node>(k);
+			wp1 = wp1.lock()->east;
+		}
+		// case for all rows after the first
+		else if (row_count >= 1) {
+
+			// add node in row 
+			wp1.lock()->east = make_shared<node>(k);
+			wp1 = wp1.lock()->east;
+
+			// draw edge from upper to lower node
+			wp2 = wp2.lock()->east;
+			wp2.lock()->south = wp1.lock();
+		}
+	}
+	// draw edges from bottom right corner to top left corner
+	wp1.lock()->east = head;
+	wp1.lock()->south = head;
+
+	wp2 = head->east;
+
+	wp1 = head;
+
+	for (int h = 0; h < i - 1; h++) {
+		wp1 = wp1.lock()->south;
+	}
+
+	for (int n = 0; n < j - 2; n++) {
+		wp1.lock()->south = wp2.lock();
+		wp1 = wp1.lock()->east;
+		wp2 = wp2.lock()->east;
+	}
+
+	
+}
+
+// ring destructor
+ring::~ring() {
+	
+	weak_ptr<node> wp1 = head, wp2 = head;
+	
+	for (int i = 0; i < num_rows - 1; i++) {
+		wp2 = wp2.lock()->south;
+		wp1.lock()->east.reset();
+		wp1.lock()->south.reset();
+		wp1 = wp2;
+	}
+}
+
+// ring copy constructor
+
+ring::ring(const ring &r) : ring(r.num_rows, r.num_cols) {
+	weak_ptr<node> wp_new = head;
+	weak_ptr<node> wp_old = r.head;
+
+	for (int i = 0; i < num_rows*num_cols; i++) {
+		wp_new.lock()->value = wp_old.lock()->value;
+		wp_new = wp_new.lock()->east;
+		wp_old = wp_old.lock()->east;
+	 }
+}
+
+ring ring::Threetimes() {
+
+	ring * new_ring = new ring(num_rows, num_cols);
+
+	weak_ptr<node> wp_original = head;
+	weak_ptr<node> wp_3x = new_ring->head;
+
+	for (int i = 0; i < num_rows*num_cols; i++) {
+		wp_3x.lock()->value = (wp_original.lock()->value)*3;
+		wp_original = wp_original.lock()->east;
+		wp_3x = wp_3x.lock()->east;
+	}
+
+	return *new_ring;
+}
+
+
+// ring move constructor
+ring::ring(ring &&r): ring(r.num_rows, r.num_cols) {
+
+	weak_ptr<node> wp_new = head;
+	weak_ptr<node> wp_old = r.head;
+
+	for (int i = 0; i < num_rows*num_cols; i++) {
+		wp_new.lock()->value = wp_old.lock()->value;
+		wp_new = wp_new.lock()->east;
+		wp_old = wp_old.lock()->east;
+	}
+}
+
+
+// overload operator<<
+ostream & operator<<(ostream & str, ring &r) {
+
+	weak_ptr<node> wp1 = r.head;
+
+	for (int i = 0; i < r.num_rows*r.num_cols; i++) {
+		str << wp1.lock()->value << " ";
+		wp1 = wp1.lock()->east;
+
+		if (i % r.num_cols == r.num_cols - 1) {
+			str << endl;
+		}
+
+	}
+	return str;
+}
+
+// index operator[] overload
+int & ring::operator[](int a) {
+
+	weak_ptr<node> wp1 = head;
+
+	// move ptr to specified location
+	for (int i = 0; i < a; i++) {
+		wp1 = wp1.lock()->east;
+	}
+
+	return wp1.lock()->value;
+}
+
+// initializer list
+ring::ring(const initializer_list<int> &V) : ring(*V.begin(),*(V.begin()+1)){
+
+	auto p1 = V.begin() + 2;
+	weak_ptr<node> wp1 = head;
+
+	while (p1 != V.end()) {
+		wp1.lock()->value = *p1;
+		p1++;
+		wp1 = wp1.lock()->east;
+	}
+
+}
+
+// index operator[pair] overload
+int & ring::operator[](pair<int, int> p){
+
+	/* Case in which the parameters exceed the boundries of ring
+	if (p.first >= num_rows || p.second >= num_cols) {
+		return;
+	}
+	*/
+
+	weak_ptr<node> wp1 = head;
+
+	for (int i = 0; i < p.first; i++) {
+		wp1 = wp1.lock()->south;
+	}
+
+	for (int i = 0; i < p.second; i++) {
+		wp1 = wp1.lock()->east;
+	}
+
+	return wp1.lock()->value;
+}
+
+// delete column
+void ring::DelCol(int i) {
+
+	// return on invalid i input
+	if (i > num_cols || num_cols < 0) {
+		return;
+	}
+
+	weak_ptr<node> wp1 = head;
+	int row_count = 0;
+
+	// case to delete first column
+	if (i == 0) {
+
+		wp1 = wp1.lock()->east;
+		head = wp1.lock();
+
+		for (int j = 1; j < (num_cols*num_rows) - num_rows; j++) {
+
+			if ((j + row_count) % num_cols == num_cols - 1 && row_count == num_rows - 1) {
+				wp1.lock()->east = head;
+				wp1.lock()->south = head;
+			}
+			else if ((j + row_count) % num_cols == num_cols - 1) {
+				wp1.lock()->east = wp1.lock()->east->east;
+				row_count++;
+			}
+			wp1 = wp1.lock()->east;
+		}
+	}
+	// case to delete last column
+	else if (i == num_cols - 1) {
+
+		weak_ptr<node> wp1 = head;
+
+		for (int j = 0; j < (num_cols*num_rows) - num_rows; j++) {
+			
+			if ((j + row_count) % num_cols == 3 && row_count == num_rows - 1) {
+				wp1.lock()->east = head;
+				wp1.lock()->south = head;
+			}
+			else if ((j + row_count) % num_cols == 3){
+				wp1.lock()->east = wp1.lock()->east->east;
+				row_count++;
+			}
+			wp1 = wp1.lock()->east;
+		}
+	}
+	// case to delete interior columns
+	else {
+
+		weak_ptr<node> wp1 = head;
+
+		for (int j = 0; j < i - 1; j++) {
+			wp1 = wp1.lock()->east;
+		}
+
+		for (int k = 0; k < num_rows; k++) {
+			wp1.lock()->east = wp1.lock()->east->east;
+			wp1 = wp1.lock()->south;
+		}
+		wp1.lock()->south = wp1.lock()->east->south;
+	}
+	num_cols--;
+}
+
+
+// L-value operator overload
+void ring::operator=(const ring &r) {
+	
+	ring * new_ring = new ring(r);
+
+	this->~ring();
+
+	head = new_ring->head;
+	num_rows = new_ring->num_rows;
+	num_cols = new_ring->num_cols;
+}
+
+// R-value operator= overload
+void ring::operator=(ring &&r) {
+
+	ring * new_ring = new ring(r);
+
+	this->~ring();
+
+	head = new_ring->head;
+	num_rows = new_ring->num_rows;
+	num_cols = new_ring->num_cols;
+}
+
+int main() {
+
+	ring R1(4, 6);//24 numbers from 0 to 23 will be initialized to nodes.
+	cout << R1 << endl;
+	R1[14] = 1000;
+	R1[{2, 4}] = 2000;
+	cout << R1[14] << " " << R1[{2, 4}] << endl;
+	R1.DelCol(3);
+	cout << R1 << endl;
+	R1.DelCol(4);
+	cout << R1 << endl;
+	R1.DelCol(0);
+	cout << R1 << endl;
+	shared_ptr<ring> p1 = make_shared<ring>(3, 5);
+	cout << *p1 << endl;
+	ring * point = p1.get();
+	p1.reset();
+	
+	ring R2 = { 3, 5, 10,20,30,40,50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000 };
+	//first two numbers are num_rows and num_cols; followed by values of nodes of ring
+	cout << R2 << endl;
+	ring R3(R2);
+	cout << R3 << endl;
+	ring R4;
+	R4 = R3;
+	cout << R4 << endl;
+	ring R5;
+	R5 = R4.Threetimes();
+	cout << R5 << endl;
+	getchar();
+	getchar();
+	return 0;
+}

@@ -1,0 +1,433 @@
+//  HW5
+//  Name: Junsong Qian
+//  Email: juqian@syr.edu
+//  SUID: 990984990
+//HW5 Due: April 7 (Sunday) at 11:59PM
+#include <iostream>
+#include <memory>
+
+using namespace std;
+
+class node {
+public:
+	shared_ptr<node> east;
+	shared_ptr<node> south;
+	int value;
+	node() {}
+	node(int i) { value = i; }
+};
+
+class ring {
+public:
+	//Implement all functions described below
+	//funciton operator[] can be invoked by other functions
+
+
+	shared_ptr<node> head;
+	int num_rows;
+	int num_cols;
+	ring() {}
+	ring(int i, int j);//constructor
+					   //i rows and j cols
+					   //values from 0 to i*j-1
+					   //See the photo for ring structures.
+
+	~ring();//destructor; do as little work as possible
+	ring(const ring &r); //copy constructor
+	ring(ring &&r); //move constructor
+	void operator=(ring &&r);//R-value operator=
+	void operator=(const ring &r); //L-value operator=
+	ring(const initializer_list<int> &V);//see the explanation in main function
+	int & operator[](int a);
+	int & operator[](pair<int, int> p); //first is row number and second is col number
+
+	void DelCol(int i);//delete col i of *this
+	ring Threetimes();
+	//return a ring with the same dimenstion as *this, and the value of every node is three times of that of *this.
+
+};
+ring::ring(int i, int j)
+{
+	num_rows = i;
+	num_cols = j;
+	head = make_shared<node>(0);
+	shared_ptr<node> cur = head;
+	//1. complete link in row
+	int last = i * j -1;
+	for (int index = 1; index <= last; index++) {
+		shared_ptr<node> new_node = make_shared<node>(index);
+		cur->east = new_node;
+		cur = cur->east;
+	}
+	cur->east = head;
+
+	//2. complete link in column
+	cur = head;
+	shared_ptr<node> south_node = head;
+	shared_ptr<node> tail = head;
+	int forward = num_cols;
+	for (int row = 0; row < num_rows; row++) {
+		if (row == num_rows - 1) forward += 1;
+		for (int col = 0; col < num_cols; col++) {
+			for (int index = 0; index < forward; index++) {
+				south_node = south_node->east;
+			}
+			cur->south = south_node;
+			if (row == num_rows - 1) tail = cur;
+			cur = cur->east;
+			south_node = cur;
+		}
+	}
+	tail->south = head;
+}
+
+int & ring::operator[](int a)
+{
+	shared_ptr<node> p = head;
+	for (int i = 0; i < a; i++) {
+		p = p->east;
+	}
+	return p->value;
+}
+
+int & ring::operator[](pair<int, int> p)
+{
+	int rows = p.first;
+	int cols = p.second;
+	shared_ptr<node> n = head;
+	for (int col = 0; col < rows; col++) {
+		n = n->south;
+	}
+	for (int i = 0; i < cols; i++) {
+		n = n->east;
+	}
+
+	return n->value;
+}
+
+void ring::DelCol(int i)
+{
+	shared_ptr<node> p = head;
+	if (i == 0) { // delete the first column
+		shared_ptr<node> new_head = p->east;
+		for (int index = 0; index < num_cols - 1; index++) {
+			p = p->east;
+		}
+		for (int j = 0; j < num_rows; j++) {
+			p->east = p->east->east;
+			if (j == num_rows - 1) {
+				p->south = new_head;
+			}
+			else {
+				p = p->south;
+			}
+
+		}
+		num_cols--;
+		head = new_head;
+	}
+	else if (i == num_cols - 1) { // delete the last column
+		for (int index = 0; index < i - 1; index++) {
+			p = p->east;
+		}
+		for (int j = 0; j < num_rows; j++) {
+			p->east = p->east->east;
+			if (j == num_rows - 1) {
+				p->south = head;
+			}
+			else {
+				p = p->south;
+			}
+
+		}
+		num_cols--;
+	}
+	else {
+		for (int index = 0; index < i - 1; index++) {
+			p = p->east;
+		}
+		for (int j = 0; j < num_rows; j++) {
+			p->east = p->east->east;
+			if (j == num_rows-1) {
+				p->south = p->south->east;
+			}
+			else {
+				p = p->south;
+			}
+			
+		}
+		num_cols--;
+	}
+}
+
+ring::~ring()
+{
+	//1. In last column, reset node->east
+	//2. reset tail->south
+	//3. reset head
+
+	shared_ptr<node> p = head;
+	// go to last column
+	for (int i = 0; i < num_cols-1; i++) {
+		p = p->east;
+	}
+	for (int j = 0; j < num_rows; j++) {
+		p->east.reset();
+		if (j == num_rows - 1) {
+			p->south.reset(); //reset tail->south
+		}
+		else {
+			p = p->south;
+		}
+	}
+	head.reset();
+
+}
+
+ring::ring(const initializer_list<int>& V)
+{
+	auto it = V.begin();
+	num_rows = *it;
+	it++;
+	num_cols = *it;
+	it++;
+	shared_ptr<node> cur = head;
+	while (it != V.end()) {
+		shared_ptr<node> p = make_shared<node>(*it);
+		if (!head) { head = cur = p;  p->east = p; }
+		else {
+			cur->east = p;
+			cur = p;
+			p->east = head;
+
+		}
+		it++;
+	}
+
+	//2. complete link in column
+	cur = head;
+	shared_ptr<node> south_node = head;
+	shared_ptr<node> tail = head;
+	int forward = num_cols;
+	for (int row = 0; row < num_rows; row++) {
+		if (row == num_rows - 1) forward += 1;
+		for (int col = 0; col < num_cols; col++) {
+			for (int index = 0; index < forward; index++) {
+				south_node = south_node->east;
+			}
+			cur->south = south_node;
+			if (row == num_rows - 1) tail = cur;
+			cur = cur->east;
+			south_node = cur;
+		}
+	}
+	tail->south = head;
+}
+
+ring::ring(const ring & r)//copy constructor
+{
+	num_rows = r.num_rows;
+	num_cols = r.num_cols;
+	shared_ptr<node> r_head = r.head;
+	head = make_shared<node>(r_head->value);
+	shared_ptr<node> cur = head;
+	shared_ptr<node> r_cur = r_head->east;
+	//1. complete link in row
+	int last = num_rows * num_cols - 1;
+	for (int index = 1; index <= last; index++) {
+		shared_ptr<node> new_node = make_shared<node>(r_cur->value);
+		cur->east = new_node;
+		cur = cur->east;
+		r_cur = r_cur->east;
+	}
+	cur->east = head;
+
+	//2. complete link in column
+	cur = head;
+	shared_ptr<node> south_node = head;
+	shared_ptr<node> tail = head;
+	int forward = num_cols;
+	for (int row = 0; row < num_rows; row++) {
+		if (row == num_rows - 1) forward += 1;
+		for (int col = 0; col < num_cols; col++) {
+			for (int index = 0; index < forward; index++) {
+				south_node = south_node->east;
+			}
+			cur->south = south_node;
+			if (row == num_rows - 1) tail = cur;
+			cur = cur->east;
+			south_node = cur;
+		}
+	}
+	tail->south = head;
+
+}
+
+ring::ring(ring && r) //move constructor
+{
+	//move
+	num_rows = r.num_rows;
+	num_cols = r.num_cols;
+	head = r.head;
+	//make ring r empty
+	r.num_rows = 0;
+	r.num_cols = 0;
+	r.head.reset();
+	//cout << "leave move\n";
+}
+
+void ring::operator=(const ring & r) //L-value operator=
+{
+	// delete the old ring
+	shared_ptr<node> p = head;
+	for (int i = 0; i < num_cols - 1; i++) {
+		p = p->east;
+	}
+	for (int j = 0; j < num_rows; j++) {
+		p->east.reset();
+		if (j == num_rows - 1) {
+			p->south.reset(); 
+		}
+		else {
+			p = p->south;
+		}
+	}
+	head.reset();
+
+	// copy
+	num_rows = r.num_rows;
+	num_cols = r.num_cols;
+	shared_ptr<node> r_head = r.head;
+	head = make_shared<node>(r_head->value);
+	shared_ptr<node> cur = head;
+	shared_ptr<node> r_cur = r_head->east;
+	//1. complete link in row
+	int last = num_rows * num_cols - 1;
+	for (int index = 1; index <= last; index++) {
+		shared_ptr<node> new_node = make_shared<node>(r_cur->value);
+		cur->east = new_node;
+		cur = cur->east;
+		r_cur = r_cur->east;
+	}
+	cur->east = head;
+
+	//2. complete link in column
+	cur = head;
+	shared_ptr<node> south_node = head;
+	shared_ptr<node> tail = head;
+	int forward = num_cols;
+	for (int row = 0; row < num_rows; row++) {
+		if (row == num_rows - 1) forward += 1;
+		for (int col = 0; col < num_cols; col++) {
+			for (int index = 0; index < forward; index++) {
+				south_node = south_node->east;
+			}
+			cur->south = south_node;
+			if (row == num_rows - 1) tail = cur;
+			cur = cur->east;
+			south_node = cur;
+		}
+	}
+	tail->south = head;
+}
+
+void ring::operator=(ring && r) //R-value operator=
+{
+	// delete the old ring
+	shared_ptr<node> p = head;
+	for (int i = 0; i < num_cols - 1; i++) {
+		p = p->east;
+	}
+	for (int j = 0; j < num_rows; j++) {
+		p->east.reset();
+		if (j == num_rows - 1) {
+			p->south.reset();
+		}
+		else {
+			p = p->south;
+		}
+	}
+	head.reset();
+	// move
+	num_rows = r.num_rows;
+	num_cols = r.num_cols;
+	head = r.head;
+	//make ring r empty
+	r.num_rows = 0;
+	r.num_cols = 0;
+	r.head.reset();
+}
+
+ring ring::Threetimes()
+{
+	ring R1(*this);
+	shared_ptr<node> p = R1.head;
+	//shared_ptr<node> ori = head;
+	for (int i = 0; i < num_cols * num_rows; i++) {
+		p->value *= 3;
+		p = p->east;
+	}
+
+	return R1;
+}
+
+//overload operator<<
+ostream & operator<<(ostream &str, const ring &R) {
+	shared_ptr<node> p = R.head;
+	if (!R.head) { return str; }
+
+	str << "Output in rows:\n";
+	for (int row = 0; row < R.num_rows; row++) {
+		for (int col = 0; col < R.num_cols; col++) {
+			str << p->value << "  ";
+			p = p->east;
+		}
+		str << "\n";
+	}
+
+	/*str << "\n";
+	str << "Output in cols(row in output is column in ring):\n";
+	for (int col = 0; col < R.num_cols; col++) {
+		for (int row = 0; row < R.num_rows; row++) {
+			str << p->value << "  ";
+			p = p->south;
+		}
+		str << "\n";
+	}*/
+
+	return str;
+}
+
+
+int main() {
+
+	ring R1(4, 6);//24 numbers from 0 to 23 will be initialized to nodes.
+	cout << R1 << endl;
+	R1[14] = 1000;
+	R1[{2, 4}] = 2000;
+	cout << R1[14] << " " << R1[{2, 4}] << endl;
+	R1.DelCol(3);
+	cout << R1 << endl;
+	R1.DelCol(4);
+	cout << R1 << endl;
+	R1.DelCol(0);
+	cout << R1 << endl;
+	shared_ptr<ring> p1 = make_shared<ring>(3, 5);
+	cout << *p1 << endl;
+	p1.reset();
+	ring R2 = { 3, 5, 10,20,30,40,50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000 };//
+																							  //first two numbers are num_rows and num_cols; followed by values of nodes of ring
+	cout << R2 << endl;
+	ring R3(R2);
+	cout << R3 << endl;
+	ring R4;
+	R4 = R3;
+	cout << R4 << endl;
+	ring R5;
+	R5 = R4.Threetimes();
+	cout << R5 << endl;
+
+	getchar();
+	getchar();
+	return 0;
+}

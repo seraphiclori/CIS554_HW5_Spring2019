@@ -1,0 +1,327 @@
+// HW5
+// Tianyu Qi
+// tqi100@syr.edu
+// 399894535
+
+#include <iostream>
+#include <memory>
+
+using namespace std;
+
+class node {
+public:
+	shared_ptr<node> east;
+	shared_ptr<node> south;
+	int value;
+	node() {}
+	node(int i) { value = i; east = nullptr; south = nullptr; }
+	// ~node() { cout << "bye " << value << endl; }
+};
+
+class ring {
+public:
+	//Implement all functions described below
+	//function operator[] can be invoked by other functions
+
+
+	shared_ptr<node> head;
+	int num_cols;
+	int num_rows;
+	ring() {}
+	ring(int i, int j);//constructor
+					   //i rows and j cols
+					   //values from 0 to i*j-1
+					//See the photo for ring structures.
+
+	~ring();//destructor; do as little work as possible
+	ring(const ring &r); //copy constructor
+	ring(ring &&r); //move constructor
+	void operator=(ring &&r);//R-value operator=
+	void operator=(const ring &r); //L-value operator=
+	ring(const initializer_list<int> &V);//see the explanation in main function
+	int & operator[](int a);
+	int & operator[](pair<int, int> p); //first is row number and second is col number
+
+	void DelCol(int i);//delete col i of *this
+	ring Threetimes();
+	//return a ring with the same dimenstion as *this, and the value of every node is three times of that of *this.
+
+};
+
+ring::ring(int i, int j) {
+	head = nullptr;
+	auto p = head;
+	num_rows = i;
+	num_cols = j;
+	for (int i = 0; i < num_cols * num_rows; ++i) {
+		if (head == nullptr) {
+			head = p = shared_ptr<node>(new node(i));
+		}
+		else {
+			p->east = shared_ptr<node>(new node(i));
+			p = p->east;
+		}
+	}
+	p->east = head;
+	auto q = p;
+	for (int i = 0; i < num_cols; ++i) {
+		q = q->east;
+	}
+	while (q != head) {
+		p->south = q;
+		p = p->east;
+		q = q->east;
+	}
+	p = head->east;
+	q = head;
+	while (q->south != nullptr) q = q->south;
+	while (q->east != head) {
+		q->south = p;
+		q = q->east;
+		p = p->east;
+	}
+	q->south = head;
+}
+
+ring::~ring() {
+	shared_ptr<node> p = head;
+	// if (head != nullptr) cout << "deleting " << head->value << endl;
+	for (int i = 0; i < num_rows * num_cols; ++i) {
+		p->south.reset();
+		p = p->east;
+	}
+	for (int i = 0; i < num_rows * num_cols; ++i) {
+		auto q = p->east;
+		p->east.reset();
+		p.reset();
+		p = q;
+	}
+	head.reset();
+}
+
+ring::ring(const ring &other) {
+	head = nullptr;
+	auto p = head, q = other.head;
+	num_rows = other.num_rows;
+	num_cols = other.num_cols;
+	for (int i = 0; i < num_cols * num_rows; ++i) {
+		if (head == nullptr) {
+			head = p = shared_ptr<node>(new node(q->value));
+		}
+		else {
+			p->east = shared_ptr<node>(new node(q->value));
+			p = p->east;
+		}
+		q = q->east;
+	}
+	p->east = head;
+	q = p;
+	for (int i = 0; i < num_cols; ++i) {
+		q = q->east;
+	}
+	while (q != head) {
+		p->south = q;
+		p = p->east;
+		q = q->east;
+	}
+	p = head->east;
+	q = head;
+	while (q->south != nullptr) q = q->south;
+	while (q->east != head) {
+		q->south = p;
+		q = q->east;
+		p = p->east;
+	}
+	q->south = head;
+}
+
+ring::ring(ring&& other) {
+	num_rows = other.num_rows;
+	num_cols = other.num_cols;
+	head = other.head;
+	other.head.reset();
+	other.num_rows = 0;
+	other.num_cols = 0;
+}
+
+void ring::operator=(ring&& other) {
+	head = other.head;
+	other.head.reset();
+	num_rows = other.num_rows;
+	num_cols = other.num_cols;
+	other.num_rows = 0;
+	other.num_cols = 0;
+}
+
+void ring::operator=(const ring& other) {
+	head = other.head;
+	num_rows = other.num_rows;
+	num_cols = other.num_cols;
+}
+
+ring::ring(const initializer_list<int>& V) {
+	num_rows = *(V.begin());
+	num_cols = *(V.begin() + 1);
+	int index = 2;
+	head = nullptr;
+	shared_ptr<node> p = head, q = nullptr;
+	for (int i = 0; i < num_cols * num_rows; ++i) {
+		if (head == nullptr) {
+			head = p = shared_ptr<node>(new node(*(V.begin() + index)));
+		}
+		else {
+			p->east = shared_ptr<node>(new node(*(V.begin() + index)));
+			p = p->east;
+		}
+		index += 1;
+	}
+	p->east = head;
+	q = p;
+	for (int i = 0; i < num_cols; ++i) {
+		q = q->east;
+	}
+	while (q != head) {
+		p->south = q;
+		p = p->east;
+		q = q->east;
+	}
+	p = head->east;
+	q = head;
+	while (q->south != nullptr) q = q->south;
+	while (q->east != head) {
+		q->south = p;
+		q = q->east;
+		p = p->east;
+	}
+	q->south = head;
+}
+
+void ring::DelCol(int i) {
+	if (i < 0 || i >= num_cols) return;
+	if (i == 0 && num_cols == 1) {
+		shared_ptr<node> p = head;
+		for (int i = 0; i < num_rows * num_cols; ++i) {
+			p->south.reset();
+			p = p->east;
+		}
+		for (int i = 0; i < num_rows * num_cols; ++i) {
+			auto q = p->east;
+			p->east.reset();
+			p.reset();
+			p = q;
+		}
+		head.reset();
+		num_cols = num_rows = 0;
+		return;
+	}
+	int target = i, nextCol = (i + 1 + num_cols) % num_cols, prevCol = (i - 1 + num_cols) % num_cols;
+	auto p = head, q = head;
+	for (int i = 0; i < prevCol; ++i) {
+		p = p->east;
+	}
+	for (int i = 0; i < nextCol; ++i) {
+		q = q->east;
+	}
+	if (i == 0) {
+		head = q;
+	}
+	// cout << "two of them " << p->value << " " << q->value << endl;
+	for (int i = 0; i < num_rows; ++i) {
+		auto tmp = p->east;
+		p->east = tmp->east;
+		if (i == num_rows - 1) {
+			p->south = tmp->south;
+		}
+		// cout << "try to reset " << tmp->value << endl;
+		tmp->east.reset();
+		tmp->south.reset();
+		tmp.reset();
+		p = p->south;
+	}
+	num_cols -= 1;
+	return;
+}
+
+ring ring::Threetimes() {
+	ring res(*this);
+	auto p = res.head;
+	while (p->east != res.head) {
+		p->value *= 3;
+		p = p->east;
+	}
+	p->value *= 3;
+	return res;
+}
+
+int & ring::operator[](int a) {
+	auto p = head;
+	for (int i = 0; i < a; ++i) {
+		p = p->east;
+	}
+	return p->value;
+}
+
+int & ring::operator[](pair<int, int> index) {
+	auto p = head;
+	int should = (index.first + 1) * (index.second + 1);
+	for (int i = 0; i < should; ++i) {
+		p = p->east;
+	}
+	return p->value;
+}
+
+//overload operator<<
+ostream & operator << (ostream &out, const ring& r) {
+	/*out << r.num_rows << " " << r.num_cols << endl;
+	out << endl;*/
+	auto p = r.head;
+	for (int i = 0; i < r.num_rows; ++i) {
+		for (int j = 0; j < r.num_cols; ++j) {
+			out << p->value << " ";
+			p = p->east;
+		}
+		out << endl;
+	}
+	/*out << endl;
+	p = r.head;
+	for (int i = 0; i < r.num_cols; ++i) {
+		for (int j = 0; j < r.num_rows; ++j) {
+			out << p->value << " ";
+			p = p->south;
+		}
+		out << endl;
+	}*/
+	return out;
+}
+
+int main() {
+
+	ring R1(4, 6);//24 numbers from 0 to 23 will be initialized to nodes.
+	cout << R1 << endl;
+	R1[14] = 1000;
+	R1[{2, 4}] = 2000;
+	cout << R1[14] << " " << R1[{2, 4}] << endl;
+	R1.DelCol(3);
+	cout << R1 << endl;
+	R1.DelCol(4);
+	cout << R1 << endl;
+	R1.DelCol(0);
+	cout << R1 << endl;
+	shared_ptr<ring> p1 = make_shared<ring>(3, 5);
+	cout << *p1 << endl;
+	p1.reset();
+	ring R2 = { 3, 5, 10,20,30,40,50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000 };//
+	 //first two numbers are num_rows and num_cols; followed by values of nodes of ring
+	cout << R2 << endl;
+	ring R3(R2);
+	cout << R3 << endl;
+	ring R4;
+	R4 = R3;
+	cout << R4 << endl;
+	ring R5;
+	R5 = R4.Threetimes();
+	cout << R5 << endl;
+	getchar();
+	getchar();
+	return 0;
+}

@@ -1,0 +1,404 @@
+//CIS554 HW5
+
+//Liu,Senyuan
+
+//sliu69@syr.edu
+
+//SUID:236161955
+
+
+#include <iostream>
+#include <memory>
+using namespace std;
+class node {
+public:
+	shared_ptr<node> east;
+	shared_ptr<node> south;
+	int value;
+	node() {}
+	node(int i) { value = i; }
+};
+class ring {
+public:
+	//Implement all functions described below
+	//funciton operator[] can be invoked by other functions
+
+	shared_ptr<node> head;
+	int num_rows;
+	int num_cols;
+	ring() {}
+	ring(int i, int j) {
+		num_rows = i;
+		num_cols = j;
+		shared_ptr<node> sp1;
+		shared_ptr<node> sp2;
+		shared_ptr<node> sp3;
+		sp1 = make_shared<node>(0);
+		head = sp1;
+		for (int m = 2; m <= num_cols * num_rows; m++) {
+			sp2 = make_shared<node>(m - 1);
+			sp1->east = sp2;
+			sp1 = sp2;
+		}
+		sp1->east = head;
+		for (int m = 1; m <= j; m++) {
+			for (int n = 1; n <= i; n++) {
+				if (m == 1 && n == 1) {
+					sp1 = head;
+					sp2 = sp1;
+					sp3 = sp1->east;
+					goto X;
+				}
+				if (n != 1) {
+					for (int l = 1; l <= j; l++) {
+						sp2 = sp2->east;
+					}
+				}
+				else { sp2 = sp3; }
+				sp1->south = sp2;
+				sp1 = sp2;
+				if (n == 1 && m != j) { sp3 = sp1->east; }
+				if (m == j && n == i) {
+					sp2->south = head;
+				}
+			X:;
+			}
+		}
+	}//constructor
+		   //i rows and j cols
+		   //values from 0 to i*j-1
+		//See the photo for ring structures.
+	~ring() {
+		shared_ptr<node> sp1, sp2;
+		sp1 = head;
+		for (int m = 1; m <= num_cols * num_rows; m++) {
+			sp2 = sp1->east;
+			sp1->east.reset();
+			sp1->south.reset();
+			sp1 = sp2;
+		}
+		head.reset();
+		num_cols = 0;
+		num_rows = 0;
+	}//destructor; do as little work as possible
+	ring(const ring &r) {
+		num_cols = r.num_cols;
+		num_rows = r.num_rows;
+		shared_ptr<node> sp1, sp2, sp3, sp11, sp22;
+		sp11 = r.head;
+		sp1 = make_shared<node>(sp11->value);
+		head = sp1;
+		for (int m = 2; m <= num_cols * num_rows; m++) {
+			sp22 = sp11->east;
+			sp2 = make_shared<node>(sp22->value);
+			sp1->east = sp2;
+			sp1 = sp2;
+			sp11 = sp22;
+		}
+		sp1->east = head;
+		for (int m = 1; m <= num_cols; m++) {
+			for (int n = 1; n <= num_rows; n++) {
+				if (m == 1 && n == 1) {
+					sp1 = head;
+					sp2 = sp1;
+					sp3 = sp1->east;
+					goto X;
+				}
+				if (n != 1) {
+					for (int l = 1; l <= num_cols; l++) {
+						sp2 = sp2->east;
+					}
+				}
+				else { sp2 = sp3; }
+				sp1->south = sp2;
+				sp1 = sp2;
+				if (n == 1 && m != num_cols) { sp3 = sp1->east; }
+				if (m == num_cols && n == num_rows) {
+					sp2->south = head;
+				}
+			X:;
+			}
+		}
+	}//copy constructor
+	ring(ring &&r) {
+		num_cols = r.num_cols;
+		num_rows = r.num_rows;
+		shared_ptr<node> sp1, sp2, sp3, sp11, sp22;
+		sp11 = r.head;
+		sp1 = make_shared<node>(sp11->value);
+		head = sp1;
+		for (int m = 2; m <= num_cols * num_rows; m++) {
+			sp22 = sp11->east;
+			sp2 = make_shared<node>(sp22->value);
+			sp1->east = sp2;
+			sp1 = sp2;
+			sp11->east.reset();
+			sp11->south.reset();
+			sp11 = sp22;
+		}
+		sp1->east = head;
+		r.head.reset();
+		r.num_cols = 0;
+		r.num_rows = 0;
+		for (int m = 1; m <= num_cols; m++) {
+			for (int n = 1; n <= num_rows; n++) {
+				if (m == 1 && n == 1) {
+					sp1 = head;
+					sp2 = sp1;
+					sp3 = sp1->east;
+					goto X;
+				}
+				if (n != 1) {
+					for (int l = 1; l <= num_cols; l++) {
+						sp2 = sp2->east;
+					}
+				}
+				else { sp2 = sp3; }
+				sp1->south = sp2;
+				sp1 = sp2;
+				if (n == 1 && m != num_cols) { sp3 = sp1->east; }
+				if (m == num_cols && n == num_rows) {
+					sp2->south = head;
+				}
+			X:;
+			}
+		}
+	} //move constructor
+	void operator=(ring &&r) {
+		num_cols = r.num_cols;
+		num_rows = r.num_rows;
+		shared_ptr<node> sp1, sp2, sp3, sp11, sp22;
+		sp11 = r.head;
+		sp1 = make_shared<node>(sp11->value);
+		head = sp1;
+		for (int m = 2; m <= num_cols * num_rows; m++) {
+			sp22 = sp11->east;
+			sp2 = make_shared<node>(sp22->value);
+			sp1->east = sp2;
+			sp1 = sp2;
+			sp11->east.reset();
+			sp11->south.reset();
+			sp11 = sp22;
+		}
+		sp1->east = head;
+		r.head.reset();
+		r.num_cols = 0;
+		r.num_rows = 0;
+		for (int m = 1; m <= num_cols; m++) {
+			for (int n = 1; n <= num_rows; n++) {
+				if (m == 1 && n == 1) {
+					sp1 = head;
+					sp2 = sp1;
+					sp3 = sp1->east;
+					goto X;
+				}
+				if (n != 1) {
+					for (int l = 1; l <= num_cols; l++) {
+						sp2 = sp2->east;
+					}
+				}
+				else { sp2 = sp3; }
+				sp1->south = sp2;
+				sp1 = sp2;
+				if (n == 1 && m != num_cols) { sp3 = sp1->east; }
+				if (m == num_cols && n == num_rows) {
+					sp2->south = head;
+				}
+			X:;
+			}
+		}
+	}//R-value operator=
+	void operator=(const ring &r) {
+		num_cols = r.num_cols;
+		num_rows = r.num_rows;
+		shared_ptr<node> sp1, sp2, sp3, sp11, sp22;
+		sp11 = r.head;
+		sp1 = make_shared<node>(sp11->value);
+		head = sp1;
+		for (int m = 2; m <= num_cols * num_rows; m++) {
+			sp22 = sp11->east;
+			sp2 = make_shared<node>(sp22->value);
+			sp1->east = sp2;
+			sp1 = sp2;
+			sp11 = sp22;
+		}
+		sp1->east = head;
+		for (int m = 1; m <= num_cols; m++) {
+			for (int n = 1; n <= num_rows; n++) {
+				if (m == 1 && n == 1) {
+					sp1 = head;
+					sp2 = sp1;
+					sp3 = sp1->east;
+					goto X;
+				}
+				if (n != 1) {
+					for (int l = 1; l <= num_cols; l++) {
+						sp2 = sp2->east;
+					}
+				}
+				else { sp2 = sp3; }
+				sp1->south = sp2;
+				sp1 = sp2;
+				if (n == 1 && m != num_cols) { sp3 = sp1->east; }
+				if (m == num_cols && n == num_rows) {
+					sp2->south = head;
+				}
+			X:;
+			}
+		}
+	} //L-value operator=
+	ring(const initializer_list<int> &V) {
+		auto it1 = V.begin();
+		num_rows = *it1;
+		it1++;
+		num_cols = *it1;
+		it1++;
+		shared_ptr<node> sp1, sp2, sp3;
+		sp1 = make_shared<node>(*it1);
+		head = sp1;
+		it1++;
+		for (int m = 2; m <= num_cols * num_rows; m++) {
+			sp2 = make_shared<node>(*it1);
+			sp1->east = sp2;
+			sp1 = sp2;
+			it1++;
+		}
+		sp1->east = head;
+		for (int m = 1; m <= num_cols; m++) {
+			for (int n = 1; n <= num_rows; n++) {
+				if (m == 1 && n == 1) {
+					sp1 = head;
+					sp2 = sp1;
+					sp3 = sp1->east;
+					goto X;
+				}
+				if (n != 1) {
+					for (int l = 1; l <= num_cols; l++) {
+						sp2 = sp2->east;
+					}
+				}
+				else { sp2 = sp3; }
+				sp1->south = sp2;
+				sp1 = sp2;
+				if (n == 1 && m != num_cols) { sp3 = sp1->east; }
+				if (m == num_cols && n == num_rows) {
+					sp2->south = head;
+				}
+			X:;
+			}
+		}
+	}//see the explanation in main function
+	int & operator[](int a) {
+		shared_ptr<node> sp1;
+		sp1 = head;
+		if (a == 0) { return sp1->value; };
+		for (int i = 1; i <= a; i++) {
+			sp1 = sp1->east;
+		}
+		return sp1->value;
+	}
+	int & operator[](pair<int, int> p) {
+		int j = p.first*num_cols + p.second;
+		return operator[](j);
+	} //first is row number and second is col number
+	void DelCol(int i) {
+		shared_ptr<node> sp1, sp2, sp3;
+		sp1 = head;
+		if (num_cols == 1) {
+			head.reset();
+			sp1->east.reset();
+			sp2->south.reset();
+			num_cols = 0;
+			num_rows = 0;
+			return;
+		};
+		if (i == 0) {
+			for (int j = 1; j < num_cols; j++) {
+				sp1 = sp1->east;
+			}
+		}
+		else {
+			for (int j = 1; j < i; j++) {
+				sp1 = sp1->east;
+			}
+		}
+		for (int j = 0; j < num_rows - 1; j++) {
+			sp2 = sp1->south;
+			sp3 = sp1->east;
+			sp1->east = sp3->east;
+			sp3->south.reset();
+			sp1 = sp2;
+		}
+		sp3 = sp1->east;
+		sp1->east = sp3->east;
+		sp1->south = sp3->south;
+		sp3->south.reset();
+		if (i == 0) {
+			head = sp3->east;
+			sp1->south = head;
+		}
+		num_cols = num_cols - 1;
+	}//delete col i of *this
+	ring Threetimes() {
+		ring R(num_rows, num_cols);
+		shared_ptr<node> sp1, sp11;
+		sp1 = head;
+		sp11 = R.head;
+		for (int i = 0; i < num_cols*num_rows; i++) {
+			sp11->value = 3 * sp1->value;
+			sp1 = sp1->east;
+			sp11 = sp11->east;
+		}
+		return move(R);
+	}
+
+	//return a ring with the same dimenstion as *this, and the value of every node is three times of that of *this.
+};
+
+ostream & operator<<(ostream &str, const ring &r) {
+	shared_ptr<node> sp1;
+	sp1 = r.head;
+	for (int j = 0; j < r.num_rows; j++) {
+		for (int k = 0; k < r.num_cols; k++) {
+			str << sp1->value << " ";
+			sp1 = sp1->east;
+		}
+		str << endl;
+	}
+	str << endl;
+	return str;
+}
+//overload operator<<
+
+int main() {
+
+	ring R1(4, 6);//24 numbers from 0 to 23 will be initialized to nodes.
+	cout << R1 << endl;
+	R1[14] = 1000;
+	R1[{2, 4}] = 2000;
+	cout << R1[14] << " " << R1[{2, 4}] << endl;
+	R1.DelCol(3);
+	cout << R1 << endl;
+	R1.DelCol(4);
+	cout << R1 << endl;
+	R1.DelCol(0);
+	cout << R1 << endl;
+	shared_ptr<ring> p1 = make_shared<ring>(3, 5);
+	cout << *p1 << endl;
+	p1.reset();
+	ring R2 = { 3, 5, 10,20,30,40,50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000 };//
+	 //first two numbers are num_rows and num_cols; followed by values of nodes of ring
+	cout << R2 << endl;
+	ring R3(R2);
+	cout << R3 << endl;
+	ring R4;
+	R4 = R3;
+	cout << R4 << endl;
+	ring R5;
+	R5 = R4.Threetimes();
+	cout << R5 << endl;
+
+	getchar();
+	getchar();
+	return 0;
+}

@@ -1,0 +1,572 @@
+//Name: Prashant Kamat
+//SUID: 324755849
+//HW5 Due: April 7 (Sunday) at 11:59PM
+#include <iostream>
+#include <memory>
+
+using namespace std;
+
+class node {
+public:
+    shared_ptr<node> east;
+    shared_ptr<node> south;
+    int value;
+    node() {}
+    node(int i) { value = i; }
+};
+
+class ring {
+public:
+    
+    //Implement all functions described below
+    //funciton operator[] can be invoked by other functions
+    
+    shared_ptr<node> head;
+    int num_rows;
+    int num_cols;
+    ring() {}
+    ring(int i, int j);
+    ~ring();//destructor; do as little work as possible
+    ring(const ring &r); //copy constructor
+    ring(ring &&r); //move constructor
+    void operator=(ring &&r);//R-value operator=
+    void operator=(const ring &r); //L-value operator=
+    ring(const initializer_list<int> &V);//see the explanation in main function
+    int & operator[](int a);
+    int & operator[](pair<int, int> p); //first is row number and second is col number
+    
+    void DelCol(int i);//delete col i of *this
+    ring Threetimes();
+    //return a ring with the same dimenstion as *this, and the value of every node is three times of that of *this.
+    
+};
+
+//Ring constructor
+ring::ring(int i, int j) : ring()
+{
+    if (i > 0 && j > 0) //num of rows and numbers of columns is more than zero
+    {
+        //Assign the rows and cols to create the ring node
+        num_rows = i;
+        num_cols = j;
+        
+        //create a shared pointer to create the first node
+        //create the rest of the ring by assigning the east node to all the current nodes
+        
+        shared_ptr<node> currentNode = make_shared<node>(0); //first node created
+        head = currentNode; //assigned head to the currentNode - 0
+        
+        //create a ring with only the "east" pointers
+        //at the end of the iteration, currentNode will be set to head
+        for (int i = 0; i < num_rows*num_cols; i++)
+        {
+            if (i == num_rows * num_cols - 1)
+            {
+                currentNode->east = head;
+            }
+            else
+            {
+                currentNode->east = make_shared<node>(i + 1);
+            }
+            currentNode = currentNode->east;
+        }
+        currentNode = head;
+        
+        //for a single row or column, the logic will be as follows
+        if (i == 1 || j == 1)
+        {
+            int currentPosition = 0;
+            while (currentPosition < i*j)
+            {
+                currentNode->south = currentNode->east;
+                currentNode = currentNode->east;
+                currentPosition++;
+            }
+        }
+        else
+        {
+            //create a shared pointer "southOfCurrentNode"
+            shared_ptr<node> southOfCurrentNode = head;
+            
+            //set shared pointer position before setting the south pointers
+            int positionOfSCN = 0;
+            while (positionOfSCN < j)
+            {
+                southOfCurrentNode = southOfCurrentNode->east;
+                positionOfSCN++;
+            }
+            //the "southOfCurrentNode" is set to the current south of the head
+            //now set all the souths while currentNode doesnt reach the last row
+            int setSouth = 0;
+            while (setSouth < (j*(i - 1)))
+            {
+                currentNode->south = southOfCurrentNode;
+                currentNode = currentNode->east;
+                southOfCurrentNode = southOfCurrentNode->east;
+                setSouth++;
+            }
+            
+            //all the souths are set except for the nodes the last row
+            //currentNode is last node of second row
+            //southOfCurrentNode is last node of the ring
+            //"setSouth" = j*(i-1)
+            //currentNode = currentNode->east; //set the currentNode to LastRow FirstColumn
+            southOfCurrentNode = head->east; //set the southOfCurrentNode
+            while (setSouth < i*j)
+            {
+                if (setSouth == i * j - 1)
+                {
+                    currentNode->south = head;
+                    southOfCurrentNode = southOfCurrentNode->east;
+                }
+                else
+                {
+                    currentNode->south = southOfCurrentNode;
+                    southOfCurrentNode = southOfCurrentNode->east;
+                }
+                currentNode = currentNode->east;
+                setSouth++;
+            }
+        }
+    }
+}
+
+//Ring Destructor
+ring::~ring() {
+    num_cols = 0;
+    num_rows = 0;
+    head = nullptr;
+}
+
+
+int& ring:: operator[](int a)
+{
+        shared_ptr<node> currentNode = head;
+        int findNode = 0;
+        while(findNode < a)
+        {
+            currentNode = currentNode->east;
+            findNode++;
+        }
+        return currentNode->value;
+}
+
+int& ring:: operator[](pair<int, int> p)
+{
+    shared_ptr<node> currentNode = head;
+    int findNode = 0;
+    while(findNode < (p.first*this->num_cols+p.second))
+    {
+        currentNode = currentNode->east;
+        findNode++;
+    }
+    return currentNode->value;
+}
+
+//Three times
+ring ring:: Threetimes()
+{
+    ring newRing(num_rows,num_cols); // create a new ring with same number of rows and cols
+    shared_ptr<node> currentNodeOfNewRing = newRing.head;
+    shared_ptr<node> currentNode = head;
+    
+    for(int i=0; i<num_rows*num_cols;i++)
+    {
+        currentNodeOfNewRing->value = 3*currentNode->value;
+        currentNodeOfNewRing = currentNodeOfNewRing->east;
+        currentNode = currentNode->east;
+    }
+    return newRing;
+}
+
+////delete col i of *this
+void ring::DelCol(int i)
+{
+    if(i>=0 || i<this->num_cols)
+    {
+        if(this->num_cols == 1)
+        {
+            head = nullptr;
+            this->num_rows = 0; this->num_cols = 0;
+        }
+        else
+        {
+            //set a pointer previous to the currentColumn, currentColumn and the next column
+            //set the previous pointer to the right position
+            shared_ptr<node> previousNode = head;
+            int findColumn = 0;
+            
+            while((findColumn+1)%this->num_cols!=i)
+            {
+                previousNode = previousNode->east;
+                findColumn++;
+            }
+            
+            shared_ptr<node> currentNode = previousNode->east;
+            shared_ptr<node> nextNode = currentNode->east;
+            
+            //number of nodes deleted will be equal to the number of rows
+            int currentRow = 0;
+            while(currentRow < this->num_rows)
+            {
+                previousNode->east = nextNode;
+                if(currentRow < this->num_rows-1)
+                {
+                    previousNode = previousNode->south;
+                    currentNode = currentNode->south;
+                    nextNode = nextNode->south;
+                }
+                currentRow++;
+            }
+            
+            if(i==0)
+            {
+                previousNode->south = head->east;
+                head = head->east;
+            }
+            else
+            {
+                previousNode->south = currentNode->south;
+                currentNode->south = nullptr;
+            }
+            this->num_cols--;
+        }
+    }
+}
+
+//copy constructor
+ring::ring(const ring &r) : ring()
+{
+    //Assign the rows and cols to create the ring node
+    num_rows = r.num_rows;
+    num_cols = r.num_cols;
+    
+    //create a tempNode to keep track of the nodes in the original ring
+    shared_ptr<node> tempNode = r.head;
+    
+    //create a shared pointer to create the first node
+    //create the rest of the ring by assigning the east node to all the current nodes
+    
+    shared_ptr<node> currentNode = make_shared<node>(tempNode->value); //first node created
+    head = currentNode; //assigned head to the currentNode - 0
+    
+    
+    //create a ring with only the "east" pointers
+    //at the end of the iteration, currentNode will be set to head
+    for (int i = 0; i < num_rows*num_cols; i++)
+    {
+        tempNode = tempNode->east;
+        if (i == num_rows * num_cols - 1)
+        {
+            currentNode->east = head;
+        }
+        else
+        {
+            currentNode->east = make_shared<node>(tempNode->value);
+        }
+        currentNode = currentNode->east;
+    }
+    currentNode = head;
+    tempNode = head;
+    
+    //for a single row or column, the logic will be as follows
+    if (num_rows == 1 || num_cols == 1)
+    {
+        int currentPosition = 0;
+        while (currentPosition < num_rows*num_cols)
+        {
+            currentNode->south = currentNode->east;
+            currentNode = currentNode->east;
+            currentPosition++;
+        }
+    }
+    else
+    {
+        //create a shared pointer "southOfCurrentNode"
+        shared_ptr<node> southOfCurrentNode = head;
+        
+        //set shared pointer position before setting the south pointers
+        int positionOfSCN = 0;
+        while (positionOfSCN < num_cols)
+        {
+            southOfCurrentNode = southOfCurrentNode->east;
+            positionOfSCN++;
+        }
+        //the "southOfCurrentNode" is set to the current south of the head
+        //now set all the souths while currentNode doesnt reach the last row
+        int setSouth = 0;
+        while (setSouth < (num_cols*(num_rows - 1)))
+        {
+            currentNode->south = southOfCurrentNode;
+            currentNode = currentNode->east;
+            southOfCurrentNode = southOfCurrentNode->east;
+            setSouth++;
+        }
+        
+        //all the souths are set except for the nodes the last row
+        //currentNode is last node of second row
+        //southOfCurrentNode is last node of the ring
+        //"setSouth" = j*(i-1)
+        //currentNode = currentNode->east; //set the currentNode to LastRow FirstColumn
+        southOfCurrentNode = head->east; //set the southOfCurrentNode
+        while (setSouth < num_rows*num_cols)
+        {
+            if (setSouth == num_rows * num_cols - 1)
+            {
+                currentNode->south = head;
+                southOfCurrentNode = southOfCurrentNode->east;
+            }
+            else
+            {
+                currentNode->south = southOfCurrentNode;
+                southOfCurrentNode = southOfCurrentNode->east;
+            }
+            currentNode = currentNode->east;
+            setSouth++;
+        }
+    }
+}
+
+//move constructor
+ring::ring(ring &&r) : ring()
+{
+    head = r.head;
+    num_cols = r.num_cols;
+    num_rows = r.num_rows;
+}
+
+//r-value
+void ring::operator=(ring &&r)
+{
+    head = r.head;
+    num_cols = r.num_cols;
+    num_rows = r.num_rows;
+}
+
+//l-value
+void ring::operator=(const ring &r)
+{
+    //Assign the rows and cols to create the ring node
+    num_rows = r.num_rows;
+    num_cols = r.num_cols;
+    
+    //create a tempNode to keep track of the nodes in the original ring
+    shared_ptr<node> tempNode = r.head;
+    
+    //create a shared pointer to create the first node
+    //create the rest of the ring by assigning the east node to all the current nodes
+    
+    shared_ptr<node> currentNode = make_shared<node>(tempNode->value); //first node created
+    head = currentNode; //assigned head to the currentNode - 0
+    
+    
+    //create a ring with only the "east" pointers
+    //at the end of the iteration, currentNode will be set to head
+    for (int i = 0; i < num_rows*num_cols; i++)
+    {
+        tempNode = tempNode->east;
+        if (i == num_rows * num_cols - 1)
+        {
+            currentNode->east = head;
+        }
+        else
+        {
+            currentNode->east = make_shared<node>(tempNode->value);
+        }
+        currentNode = currentNode->east;
+    }
+    currentNode = head;
+    tempNode = head;
+    
+    //for a single row or column, the logic will be as follows
+    if (num_rows == 1 || num_cols == 1)
+    {
+        int currentPosition = 0;
+        while (currentPosition < num_rows*num_cols)
+        {
+            currentNode->south = currentNode->east;
+            currentNode = currentNode->east;
+            currentPosition++;
+        }
+    }
+    else
+    {
+        //create a shared pointer "southOfCurrentNode"
+        shared_ptr<node> southOfCurrentNode = head;
+        
+        //set shared pointer position before setting the south pointers
+        int positionOfSCN = 0;
+        while (positionOfSCN < num_cols)
+        {
+            southOfCurrentNode = southOfCurrentNode->east;
+            positionOfSCN++;
+        }
+        //the "southOfCurrentNode" is set to the current south of the head
+        //now set all the souths while currentNode doesnt reach the last row
+        int setSouth = 0;
+        while (setSouth < (num_cols*(num_rows - 1)))
+        {
+            currentNode->south = southOfCurrentNode;
+            currentNode = currentNode->east;
+            southOfCurrentNode = southOfCurrentNode->east;
+            setSouth++;
+        }
+        
+        //all the souths are set except for the nodes the last row
+        //currentNode is last node of second row
+        //southOfCurrentNode is last node of the ring
+        //"setSouth" = j*(i-1)
+        //currentNode = currentNode->east; //set the currentNode to LastRow FirstColumn
+        southOfCurrentNode = head->east; //set the southOfCurrentNode
+        while (setSouth < num_rows*num_cols)
+        {
+            if (setSouth == num_rows * num_cols - 1)
+            {
+                currentNode->south = head;
+                southOfCurrentNode = southOfCurrentNode->east;
+            }
+            else
+            {
+                currentNode->south = southOfCurrentNode;
+                southOfCurrentNode = southOfCurrentNode->east;
+            }
+            currentNode = currentNode->east;
+            setSouth++;
+        }
+    }
+}
+
+//initializer list
+ring::ring(const initializer_list<int> &V) : ring()
+{
+    //Assign the rows and cols to create the ring node
+    auto position = V.begin();
+    num_rows = *position;
+    position++;
+    num_cols = *position;
+    position++;
+    
+    //create a shared pointer to create the first node
+    //create the rest of the ring by assigning the east node to all the current nodes
+    
+    shared_ptr<node> currentNode = make_shared<node>(*position); //first node created
+    head = currentNode; //assigned head to the currentNode - 0
+    
+    //create a ring with only the "east" pointers
+    //at the end of the iteration, currentNode will be set to head
+    while(position != V.end())
+    {
+        currentNode->east = make_shared<node>(*(position+1));
+        currentNode = currentNode->east;
+        position++;
+    }
+    currentNode->east = head;
+    currentNode = head;
+    
+    //for a single row or column, the logic will be as follows
+    if (num_rows == 1 || num_cols == 1)
+    {
+        int currentPosition = 0;
+        while (currentPosition < num_rows*num_cols)
+        {
+            currentNode->south = currentNode->east;
+            currentNode = currentNode->east;
+            currentPosition++;
+        }
+    }
+    else
+    {
+        //create a shared pointer "southOfCurrentNode"
+        shared_ptr<node> southOfCurrentNode = head;
+        
+        //set shared pointer position before setting the south pointers
+        int positionOfSCN = 0;
+        while (positionOfSCN < num_cols)
+        {
+            southOfCurrentNode = southOfCurrentNode->east;
+            positionOfSCN++;
+        }
+        //the "southOfCurrentNode" is set to the current south of the head
+        //now set all the souths while currentNode doesnt reach the last row
+        int setSouth = 0;
+        while (setSouth < (num_cols*(num_rows - 1)))
+        {
+            currentNode->south = southOfCurrentNode;
+            currentNode = currentNode->east;
+            southOfCurrentNode = southOfCurrentNode->east;
+            setSouth++;
+        }
+        
+        //all the souths are set except for the nodes the last row
+        //currentNode is last node of second row
+        //southOfCurrentNode is last node of the ring
+        //"setSouth" = num_cols*(num_rows-1)
+        //currentNode = currentNode->east; //set the currentNode to LastRow FirstColumn
+        southOfCurrentNode = head->east; //set the southOfCurrentNode
+        while (setSouth < num_rows*num_cols)
+        {
+            if (setSouth == num_rows * num_cols - 1)
+            {
+                currentNode->south = head;
+                southOfCurrentNode = southOfCurrentNode->east;
+            }
+            else
+            {
+                currentNode->south = southOfCurrentNode;
+                southOfCurrentNode = southOfCurrentNode->east;
+            }
+            currentNode = currentNode->east;
+            setSouth++;
+        }
+    }
+}
+
+//overload operator<<
+ostream & operator<<(ostream &out, const ring &R)
+{
+    shared_ptr<node> currentNode =R.head;
+    //Display the ring while traversing the ring
+    for (int i = 0; i < R.num_rows; i++)
+    {
+        for(int j = 0; j < R.num_cols; j++)
+        {
+            out << currentNode->value << '\t';
+            currentNode = currentNode->east;
+        }
+        out<<endl;
+    }
+    return out;
+}
+
+int main() {
+    
+    ring R1(4, 6);//24 numbers from 0 to 23 will be initialized to nodes.
+    cout << R1 << endl;
+    R1[14] = 1000;
+    R1[{2, 4}] = 2000;
+    cout << R1[14] << " " << R1[{2, 4}] << endl;
+    R1.DelCol(3);
+    cout << R1 << endl;
+    R1.DelCol(4);
+    cout << R1 << endl;
+    R1.DelCol(0);
+    cout << R1 << endl;
+    shared_ptr<ring> p1 = make_shared<ring>(3, 5);
+    cout << *p1 << endl;
+    p1.reset();
+    ring R2 = { 3, 5, 10,20,30,40,50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000 };//
+    //first two numbers are num_rows and num_cols; followed by values of nodes of ring
+    cout << R2 << endl;
+    ring R3(R2);
+    cout << R3 << endl;
+    ring R4;
+    R4 = R3;
+    cout << R4 << endl;
+    ring R5;
+    R5 = R4.Threetimes();
+    cout << R5 << endl;
+    
+    getchar();
+    getchar();
+    return 0;
+}

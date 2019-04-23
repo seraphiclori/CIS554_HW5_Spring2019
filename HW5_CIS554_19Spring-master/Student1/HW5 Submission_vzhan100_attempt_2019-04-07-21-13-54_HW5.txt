@@ -1,0 +1,205 @@
+//Vincent Zhang
+//CIS 554
+//vzhan100@syr.edu
+//SUID: 795469254
+//HW5 Due: April 7 (Sunday) at 11:59PM
+#include <iostream>
+#include <memory>
+
+using namespace std;
+
+class node {
+public:
+  shared_ptr<node> east;
+  shared_ptr<node> south;
+  int value;
+  node() {}
+  node(int i) { value = i; }
+};
+
+class ring {
+public:
+  //Implement all functions described below
+  //funciton operator[] can be invoked by other functions
+
+
+  shared_ptr<node> head;
+  int num_rows;
+  int num_cols;
+  ring(){}
+  ring(int i, int j) {//constructor
+             //i rows and j cols
+             //values from 0 to i*j-1
+          //See the photo for ring structures.
+    int count = 0;
+    int temp = 0;
+    int rows = i;
+    int cols = j;
+    shared_ptr<node> p1 = NULL; //ptr to keep track of last node for linking new nodes via east.
+    shared_ptr<node> top = NULL, bottom = NULL; //ptrs to keep track of node position for linking new nodes via south
+    shared_ptr<node> lr = NULL; //prt to handle linking nodes via south on the last row
+    for (int x = 0; x < rows; x++){
+      for (int y = 0; y < cols; y++){
+        temp = y;
+        //edge case for head node
+        if (x == 0 && y == 0) {
+          shared_ptr<node> P = make_shared<node>(y+count);
+          head = P;
+          p1 = head;
+          top = head;
+          bottom = p1;
+          lr = head;
+        }
+        else {
+          //link nodes via east
+          shared_ptr<node> P = make_shared<node>(y+count);
+          p1->east = P;
+          p1 = P;
+          bottom = p1;
+          //link nodes via south
+          if (bottom->value - top->value == j) {
+            top->south = bottom;
+          }
+          //link nodes on last row to the top row via south
+          if (x == i-1) {
+            if (bottom->value != (i*j)-1) {
+              lr = lr->east;
+              bottom->south = lr;
+            }
+          }
+        }
+      }
+      count += temp+1;
+    }
+    p1->east = head;
+    p1->south = head;
+  }
+
+  ~ring() {
+    //destructor; do as little work as possible
+    shared_ptr<node> P = head;
+    while (P->east != head) {P=P->east;}
+    P->east.reset();
+
+    //I copied the below code out instead of the top
+    //because I wasn't sure if P->east is the same as head in
+    //this context, otherwise I would use the bottom one line
+    //since it's less work.
+    //head.reset();
+  }
+  ring(const ring &r){
+    //copy constructor
+  }
+  ring(ring &&r); //move constructor
+  void operator=(ring &&r) {
+  //R-value operator=
+  }
+  void operator=(const ring &r) {
+   //L-value operator=
+  }
+  ring(const initializer_list<int> &V);//see the explanation in main function
+  int & operator[](int a) {
+    shared_ptr<node> P = head;
+    for (int i = 1; i <= a; i++){
+      P = P->east;
+    }
+  }
+  int & operator[](pair<int, int> p){
+    //first is row number and second is col number
+    shared_ptr<node> P = head;
+    int row = p.first;
+    int col = p.second;
+    for (int i = 0; i < row; i++) {
+      for (int j = 0; j < col; j++) {
+        if (i == 0 && j == 0) {P = head;}
+        else {P = P->east;}
+      }
+    }
+  }
+
+  void DelCol(int i){
+  //delete col i of *this
+
+    //Iterate through until it comes to the right col and then
+    //change the links and delete the node. Watch for head edge case
+    //and last row edge case.
+    /*shared_ptr<node> p1 = head;
+    int rows = this->num_rows;
+    int cols = this->num_cols;
+    for (int x = 1; x<=cols; x++) {
+      for (int y = 1; y<=rows; y++) {
+        if (x != i) {p1 = p1->south;}
+        else {
+          if (x == rows) {
+          }
+          else {
+          }
+        }
+      }
+    }*/
+  }
+
+  ring Threetimes();/*{
+  //return a ring with the same dimenstion as *this, and the value of every node is three times of that of *this.
+
+    //Don't know how to copy the original ring to ring R.
+    //If I had a copy then the rest of the logic should work in
+    //increasing every node value by 3.
+    ring R = this->ring;
+    shared_ptr<node> P = R->head;
+    P->value = (P->value)*3;
+    R.head = P;
+    while (P->east != head) {
+      P=P->east;
+      P->value = (P->value)*3;
+    }
+    return R;
+
+  }*/
+};
+
+//overload operator<<
+ostream & operator<<(ostream &str, const ring &R) {
+    shared_ptr<node> p = R.head;
+    if (!R.head) { return str; }
+    str << p->value<< " ";
+    p = p->east;
+    while (p !=  R.head) {
+      str << p->value << " ";
+      p = p->east;
+    }
+    return str;
+  }
+
+int main() {
+
+  ring R1(4, 6);//24 numbers from 0 to 23 will be initialized to nodes.
+  cout << R1 << endl;
+  //R1[14] = 1000;
+  //R1[{2, 4}] = 2000;
+  //cout << R1[14] << " " << R1[{2, 4}] << endl;
+  /*R1.DelCol(3);
+  cout << R1 << endl;
+  R1.DelCol(4);
+  cout << R1 << endl;
+  R1.DelCol(0);
+  cout << R1 << endl;
+  shared_ptr<ring> p1 = make_shared<ring>(3, 5);
+  cout << *p1 << endl;
+  p1.reset();
+  ring R2 = { 3, 5, 10,20,30,40,50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000 };//
+   //first two numbers are num_rows and num_cols; followed by values of nodes of ring
+  cout << R2 << endl;
+  ring R3(R2);
+  cout << R3 << endl;
+  ring R4;
+  R4 = R3;
+  cout << R4 << endl;
+  ring R5;
+  R5 = R4.Threetimes();
+  cout << R5 << endl;*/
+
+  getchar();
+  getchar();
+  return 0;
+}
